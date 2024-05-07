@@ -14,6 +14,8 @@ from dash_bootstrap_templates import load_figure_template
 from pages import get_data
 from pages import data_viz
 
+skip_pages = ['Equities', 'scenario_display']
+
 ####################################
 # INIT APP
 ####################################
@@ -38,7 +40,7 @@ load_figure_template("lux")
 # Main Page layout
 ####################################
 
-title = html.H1(children="US Markets Dashboard",
+title = html.H1(children="SB Trader Dashboard",
                 className=('text-center mt-4'),
                 style={'fontSize':36})
 
@@ -46,7 +48,8 @@ app.layout = html.Div(children=[
         dbc.Row(title),
         dbc.Row([html.Div(id='button',
                           children=[dbc.Button(page['name'],href=page['path'])
-                                    for page in dash.page_registry.values()
+                                    for page in dash.page_registry.values() if page['name'] != 'Equities'
+                                    #for page in dash.page_registry.values() if page['name'] not in skip_pages
                                 ],
                       className=('text-center mt-4 mb-4'),style={'fontSize':20})
                  ]),
@@ -68,4 +71,6 @@ app.layout = html.Div(children=[
 ####################################
 if __name__ == '__main__':
     server=app.server
-    app.run_server(debug=True)
+    # setting this to debug = False as we are loading to GCP
+    #app.run_server(debug=True)
+    app.run_server(debug=False, host="0.0.0.0", port=8080)

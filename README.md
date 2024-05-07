@@ -6,17 +6,23 @@
 - Extract, parse, and clean data 
 - Compute stats needed
 - Data Visualization using Plotly
-- Front-End: Plotly Dash app - deployed on render
+- Front-End: Plotly Dash app - deployed on Google Cloud Platform
 
 # Data Source
-- FRED pandas datareader: monthly yields from 3Mth to 30Y US Treasury rates
-- yfinance: daily stock prices of S&P 500 companies
-- wikipedia web scraping for S&P 500 tickers, sectors and sub-industries
-- IVV ETF extraction of weights
+- Prod Dashboard file on Google Workspace, formatted as a Google Sheet.
+- Comning soon: treasury.gov for treasury yields, par nominal yields
 
 # Type of analysis
-- Data Analysis / EDA / DataViz / Front-end app
+- Tracking various SPX, ES, MES, SPY models and analyzing performance versus factors, such as rate volatility.
+- Rate volatility factors are synthetic model factors
+- Soon to add MOVE and other market based volatility indicators.
 
 # Live app
-- Please allow c. 20/30sec to launch if the app is on sleep: https://markets-dash.onrender.com/
+- https://stealbasis.co
+
+# Building and Running on GCP
+- Commands are:
+  - gcloud builds submit --tag gcr.io/axial-crane-382617/sbt-dashboard --project=axial-crane-382617
+  - gcloud run deploy --image gcr.io/axial-crane-382617/sbt-dashboard --platform managed 
+  - --project=axial-crane-382617 --allow-unauthenticated
 
