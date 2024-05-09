@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas_datareader as pdr
+from pathlib import Path
 import yfinance as yf
 from collections import OrderedDict
 import os
@@ -20,6 +21,8 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 def get_creds():
 
     # credentials location
+
+    home_dir = Path.home()
     credentials_location = "/Users/ghazymahjub/workspace/google_api_credentials.json"
 
     creds = None
@@ -33,8 +36,13 @@ def get_creds():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                credentials_location, SCOPES)
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    credentials_location, SCOPES)
+            except FileNotFoundError as fe:
+                credentials_location = str(home_dir) + '/workspace/google_api_credentials.json'
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    credentials_location, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
@@ -245,6 +253,19 @@ def get_models_list(fn, sheet_name):
     rows = worksheet.get_all_records()
     df = pd.DataFrame(rows)
     return df
+
+
+def get_input_regression_data(fn, sheet_name):
+
+    creds = get_creds()
+    client = gspread.authorize(creds)
+    worksheet = client.open(fn).worksheet(sheet_name)
+    rows = worksheet.get_all_records()
+    df = pd.DataFrame(rows)
+    work_df = df[df.dt_Id != ''].copy()
+    work_df.dt_Id = pd.to_datetime(work_df.dt_Id)
+    create_time = datetime.now()
+    return work_df, create_time
 
 
 def get_model_signal_data(fn, sheet_name):
