@@ -7,6 +7,8 @@ ENV APP_HOME /my_app
 WORKDIR $APP_HOME
 COPY . ./
 
+ENV DEFAULT_ACCT_NUM DU9822977
+
 # install production dependencies.
 RUN pip install -r requirements.txt
 

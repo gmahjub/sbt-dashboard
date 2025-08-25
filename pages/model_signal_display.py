@@ -2,7 +2,7 @@
 # IMPORTS
 ####################################
 
-import dash
+import dash, os
 from dash import dcc, html, dash_table, callback, ctx
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
@@ -13,14 +13,22 @@ from pages import data_viz
 from datetime import date, timedelta, datetime
 import pandas as pd
 
+default_acct_num = os.getenv("DEFAULT_BROKER_ACCT_NUM")
+if default_acct_num is None:
+    default_acct_num = "DU9822977"
 gsheets_green = '#b7e1cd'
 neon_green = '#39FF14'
 lime_green = "#32CD32"
 
+today_str_date = datetime.now().strftime("%Y%m%d")
+
 dash.register_page(__name__,path='/',name='Model Main') # Home Page
 
 percentage = FormatTemplate.percentage(2)
-data_type_dict = {'Expected Return': ('numeric', percentage),
+data_type_dict = {'Timestamp': ('datetime', None),
+                  'PositionTimestamp': ('datetime', None),
+                  'PnlTimestamp': ('datetime', None),
+                  'Expected Return': ('numeric', percentage),
                   'Hit Rate': ('numeric', percentage),
                   'Risk': ('numeric', percentage),
                   'Reward': ('numeric', percentage),
@@ -52,27 +60,43 @@ data_type_dict = {'Expected Return': ('numeric', percentage),
 ####################################
 # Load data & dfs
 ####################################
-df_ms, update_time = get_data.get_model_signal_data('Prod-Dashboard Data', sheet_name='RealTime')
-earliest_date = list(df_ms.values())[1].Date.iloc[-1]
-latest_date = list(df_ms.values())[1].Date.iloc[0]
+# df_ms, update_time = get_data.get_model_signal_data('Prod-Dashboard Data', sheet_name='RealTime')
+position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                          data_type='position_pnl',
+                                                                          acct_num=default_acct_num)
+position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date, acct_num=default_acct_num)
+avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost',
+                                                                  acct_num=default_acct_num)
+pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                        data_type='pnltracker',
+                                                                        acct_num=default_acct_num)
+daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
+    get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
+total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
+total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
+available_position_dates = get_data.get_file_type_dates(data_type='positions', acct_num=default_acct_num)
+available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker', acct_num=default_acct_num)
+trade_tracker_html_docs = get_data.get_trade_tracker_html_docs()
+earliest_date = available_position_dates[0]
+latest_date = available_position_dates[-1]
 # df['DOB'].dt.year.unique()
-list_of_years = pd.to_datetime(list(df_ms.values())[1].Date).dt.year.unique().tolist() + ['All']
-model_list_df = get_data.get_models_list('Prod-Dashboard Data', sheet_name='Model List')
-accuracy_input_df = df_ms['Accuracy']
-accuracy_df = get_data.create_accuracy_df(accuracy_input_df)
-dytc_px_levels_df = get_data.get_dytc_px_levels(df_ms)
-the_trade_plans = get_data.get_trade_plans()
+# list_of_years = pd.to_datetime(list(df_ms.values())[1].Date).dt.year.unique().tolist() + ['All']
+# model_list_df = get_data.get_models_list('Prod-Dashboard Data', sheet_name='Model List')
+# accuracy_input_df = df_ms['Accuracy']
+# accuracy_df = get_data.create_accuracy_df(accuracy_input_df)
+# dytc_px_levels_df = get_data.get_dytc_px_levels(df_ms)
+# the_trade_plans = get_data.get_trade_plans()
 final_signal_nc_str = "name contains 'Final Signal' and name contains 'SB Trades'"
 prelim_signal_nc_str = "name contains 'Prelim Signal' and name contains 'SB Trades'"
-the_final_signals = get_data.get_trade_plans(name_contains=final_signal_nc_str)
-the_prelim_signals = get_data.get_trade_plans(name_contains=prelim_signal_nc_str)
-signal_integrity_df = get_data.create_integrity_df(df_ms, the_trade_plans, the_final_signals, the_prelim_signals)
-risk_event_analysis_df, rea_data_type_dict = get_data.create_re_analysis_df(df_ms)
+# the_final_signals = get_data.get_trade_plans(name_contains=final_signal_nc_str)
+# the_prelim_signals = get_data.get_trade_plans(name_contains=prelim_signal_nc_str)
+# signal_integrity_df = get_data.create_integrity_df(df_ms, the_trade_plans, the_final_signals, the_prelim_signals)
+# risk_event_analysis_df, rea_data_type_dict = get_data.create_re_analysis_df(df_ms)
 df = get_data.get_rates()
 load_figure_template("lux")
-#rates_update_time = df.index[-1].strftime("%b-%Y")
-rates_update_time = update_time
-#rates_update_time = df.index[-1].strftime("%b-%Y")
+# rates_update_time = df.index[-1].strftime("%b-%Y")
+rates_update_time = position_update_time
+# rates_update_time = df.index[-1].strftime("%b-%Y")
 
 ####################################
 # Page layout
@@ -84,8 +108,8 @@ layout = dbc.Container([
     dbc.Row(as_of,class_name=('mb-4')),
     dbc.Row([
         dbc.Col(
-            dcc.Dropdown(list_of_years,
-                         str(update_time.year-1),
+            dcc.Dropdown(available_pnltracker_dates,
+                         today_str_date,
                          id='year-filter-dropdown'),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
         dbc.Col(
@@ -105,16 +129,17 @@ layout = dbc.Container([
                                 end_date=latest_date,
                                 min_date_allowed=earliest_date,
                                 max_date_allowed=latest_date,
-                                initial_visible_month=latest_date - timedelta(days=30)),
+                                initial_visible_month=datetime.strptime(latest_date, "%Y%m%d") - timedelta(days=30)),
             #html.Div(id='output-container-date-picker-range'),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
         dbc.Col(
             html.Button('Reset', id='reset-button', n_clicks=0),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=2,class_name=('mt-4')),
         dbc.Col(
-            dcc.Dropdown(model_list_df['Name'].values,
-                         'DYTC Model',
-                         id='model_select_dropdown'
+            dcc.Dropdown(['US Treasury', 'Equity Index', 'Base & Precious, Metals', 'Oil & Gas',
+                          'G-10 Currency, USD Cross' ],
+                         'Multi-Asset Category',
+                         id='model_select_dropdownn'
             ),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
     ]),
@@ -122,27 +147,28 @@ layout = dbc.Container([
     dbc.Row([
             dbc.Col(
                 dcc.Graph(id='output-container-date-picker-range'),
-                #dcc.Graph(figure=data_viz.line_pnl(list(df_ms.values())[1],
-                #                                   visible_list=['DYTC Model Total', 'Long Always'])),
+                dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
+                                                   visible_list=['DailyPnL'])),
                 xs=12,sm=12,md=12,lg=12,xl=12,xxl=8,class_name=('mt-4')),
             dbc.Col(
                 dcc.Graph(id='pnl_histogram'),
                 xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,className=('mt-4')),
     ]),
-    dbc.Row([
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_accuracy_stats(accuracy_df)),
-            xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
-        dbc.Col(
-            dcc.Graph(figure=data_viz.performance_tree(accuracy_df)),
-            xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
-    ]),
+    # dbc.Row([
+    #     dbc.Col(
+    #         dcc.Graph(figure=data_viz.bar_plot_accuracy_stats(accuracy_df)),
+    #         xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
+    #     dbc.Col(
+    #         dcc.Graph(figure=data_viz.performance_tree(accuracy_df)),
+    #         xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
+    # ]),
 
     dbc.Row([
-        dbc.Label(list(df_ms.keys())[0], style={'fontSize': '20px', 'textAlign': 'left'}),
-        dbc.Col(dash_table.DataTable(list(df_ms.values())[0].to_dict('records'), \
-                                     [{"name": i, "id": i, "type": data_type_dict[i][0],
-                                       "format": data_type_dict[i][1]} for i in list(df_ms.values())[0].columns],
+        # dbc.Label(list(total_position_df.keys())[0], style={'fontSize': '20px', 'textAlign': 'left'}),
+        dbc.Col(dash_table.DataTable(total_position_df.to_dict('records'), \
+                                     [{"name": i, "id": i, "type": data_type_dict.setdefault(i, ('numeric', None))[0],
+                                       "format": data_type_dict.setdefault(i, ('numeric', None))[1]}
+                                      for i in total_position_df.columns],
                                      style_data_conditional=[
                                          {
                                              'if': {
@@ -150,7 +176,7 @@ layout = dbc.Container([
                                                  'column_id': col
                                              },
                                              'backgroundColor': '#ffcccb',
-                                         } for col in list(df_ms.values())[0].columns
+                                         } for col in total_position_df.columns
                                      ] + [
                                          {
                                              'if': {
@@ -158,7 +184,7 @@ layout = dbc.Container([
                                                  'column_id': col
                                              },
                                              'backgroundColor': '#32CD32'
-                                         } for col in list(df_ms.values())[0].columns
+                                         } for col in total_position_df.columns
                                      ] + [
                                          {
                                              'if': {
@@ -196,11 +222,11 @@ layout = dbc.Container([
     ]),
     #dbc.Row('',class_name=('mb-4')),
     dbc.Row([
-        dbc.Label("SBT Trade Plan", style={'fontSize': '20px', 'textAlign': 'left'}),
-        dbc.Label("Verify Signal Integrity", style={'fontSize': '20px', 'textAlign': 'right'}),
+        dbc.Label("QFS Trade Tracker", style={'fontSize': '20px', 'textAlign': 'left'}),
+        dbc.Label("7-Day", style={'fontSize': '20px', 'textAlign': 'right'}),
         dbc.Col(
-            dcc.Dropdown([x['name'] for x in the_trade_plans],
-                         the_trade_plans[0]['name'],
+            dcc.Dropdown([x for x in trade_tracker_html_docs],
+                         trade_tracker_html_docs[0],
                          id='trade_plan_select_dropdown'
             ),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
@@ -218,12 +244,12 @@ layout = dbc.Container([
         #                        "VAVDYLAVkcRzt7scu9M_JWHNhpmaFHG-UWAQnW19zOfj/pub?embedded=true",
         #                    style={"height": "533px", "width": "50%"}),
         #        xs=12,sm=12,md=12,lg=12,xl=12,xxl=12,class_name=('mt-4'))
-        dbc.Col(dash_table.DataTable(signal_integrity_df.to_dict('records'),\
+        dbc.Col(dash_table.DataTable(total_position_df.to_dict('records'),\
                                      [{"name": i, "id": i, "type": data_type_dict[i][0], "format": data_type_dict[i][1]
                                        } if 'Link' not in i else {"name": i, "id": i, "type": data_type_dict[i][0],
                                                                   "format": data_type_dict[i][1],
                                                                   "presentation": "markdown"}
-                                      for i in signal_integrity_df.columns],
+                                      for i in total_position_df.columns],
                                      style_cell={'textAlign': 'left', 'fontSize': '12px'},
                                      style_header={
                                          'backgroundColor': '#EBECF0',
@@ -236,7 +262,7 @@ layout = dbc.Container([
                                                  'column_id': col
                                              },
                                              'backgroundColor': '#ffcccb',
-                                         } for col in signal_integrity_df.columns
+                                         } for col in total_position_df.columns
                                      ] + [
                                          {
                                              'if': {
@@ -244,7 +270,7 @@ layout = dbc.Container([
                                                  'column_id': col
                                              },
                                              'backgroundColor': '#32CD32'
-                                         } for col in signal_integrity_df.columns
+                                         } for col in total_position_df.columns
                                      ] + [
                                          {
                                              'if': {
@@ -274,10 +300,10 @@ layout = dbc.Container([
     ]),
     dbc.Row('',class_name=('mb-4')),
     dbc.Row([
-        dbc.Label(list(df_ms.keys())[7], style={'fontSize': '20px', 'textAlign': 'left'}),
-        dbc.Col(dash_table.DataTable(list(df_ms.values())[7].to_dict('records'),\
+        # dbc.Label(list(total_position_df.keys())[7], style={'fontSize': '20px', 'textAlign': 'left'}),
+        dbc.Col(dash_table.DataTable(total_position_df.to_dict('records'),\
                                      [{"name": i, "id": i, "type": data_type_dict[i][0], "format": data_type_dict[i][1]
-                                       } for i in list(df_ms.values())[7].columns],
+                                       } for i in total_position_df.columns],
                                      style_cell={'textAlign': 'left', 'fontSize': '12px'},
                                      style_data_conditional=[
                                          {
@@ -286,7 +312,7 @@ layout = dbc.Container([
                                                  'column_id': col
                                              },
                                              'backgroundColor': '#ffcccb',
-                                         } for col in list(df_ms.values())[7].columns
+                                         } for col in total_position_df.columns
                                      ] + [
                                          {
                                              'if': {
@@ -294,7 +320,7 @@ layout = dbc.Container([
                                                  'column_id': col
                                              },
                                              'backgroundColor': '#32CD32'
-                                         } for col in list(df_ms.values())[7].columns
+                                         } for col in total_position_df.columns
                                      ] + [
                                          {
                                              'if': {'column_id': c},
@@ -316,50 +342,50 @@ layout = dbc.Container([
                                      style_as_list_view=True)),
 
     ]),
-    dbc.Row('',class_name=('mb-4')),
-    dbc.Row([
-        dbc.Label('Risk Event Analysis', style={'fontSize': '20px', 'textAlign': 'left'}),
-        dbc.Col(dash_table.DataTable(risk_event_analysis_df.to_dict('records'),\
-                                     [{"name": i, "id": i, "type": rea_data_type_dict[i][0],
-                                       "format": rea_data_type_dict[i][1]} for i in risk_event_analysis_df.columns],
-                                     style_cell={'textAlign': 'left', 'fontSize': '12px'},
-                                     style_data_conditional=[
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#ffcccb',
-                                         } for col in risk_event_analysis_df.columns
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#32CD32'
-                                         } for col in risk_event_analysis_df.columns
-                                     ] + [
-                                         {
-                                             'if': {'column_id': c},
-                                             'textAlign': 'right'
-                                         } for c in ['Units', 'Expected Return', 'Risk', 'Reward', 'Hit Rate']
-                                     ] + [
-                                         {
-                                             'if': {'column_id': c},
-                                             'fontWeight': 'bold'
-                                         } for c in ['DYTC Model Total', 'Long Always']
-                                     ],
-                                     style_header={
-                                         'backgroundColor': 'light grey',
-                                         'fontWeight': 'bold'
-                                     },
-                                     page_size=20,
-                                     sort_action="native",
-                                     sort_mode="multi",
-                                     style_as_list_view=True)),
-
-    ])
+    # dbc.Row('',class_name=('mb-4')),
+    # dbc.Row([
+    #     dbc.Label('Risk Event Analysis', style={'fontSize': '20px', 'textAlign': 'left'}),
+    #     dbc.Col(dash_table.DataTable(position_df.to_dict('records'),\
+    #                                  [{"name": i, "id": i, "type": rea_data_type_dict[i][0],
+    #                                    "format": rea_data_type_dict[i][1]} for i in risk_event_analysis_df.columns],
+    #                                  style_cell={'textAlign': 'left', 'fontSize': '12px'},
+    #                                  style_data_conditional=[
+    #                                      {
+    #                                          'if': {
+    #                                              'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(col=col),
+    #                                              'column_id': col
+    #                                          },
+    #                                          'backgroundColor': '#ffcccb',
+    #                                      } for col in risk_event_analysis_df.columns
+    #                                  ] + [
+    #                                      {
+    #                                          'if': {
+    #                                              'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(col=col),
+    #                                              'column_id': col
+    #                                          },
+    #                                          'backgroundColor': '#32CD32'
+    #                                      } for col in risk_event_analysis_df.columns
+    #                                  ] + [
+    #                                      {
+    #                                          'if': {'column_id': c},
+    #                                          'textAlign': 'right'
+    #                                      } for c in ['Units', 'Expected Return', 'Risk', 'Reward', 'Hit Rate']
+    #                                  ] + [
+    #                                      {
+    #                                          'if': {'column_id': c},
+    #                                          'fontWeight': 'bold'
+    #                                      } for c in ['DYTC Model Total', 'Long Always']
+    #                                  ],
+    #                                  style_header={
+    #                                      'backgroundColor': 'light grey',
+    #                                      'fontWeight': 'bold'
+    #                                  },
+    #                                  page_size=20,
+    #                                  sort_action="native",
+    #                                  sort_mode="multi",
+    #                                  style_as_list_view=True)),
+    #
+    # ])
 ], fluid=True, className="dbc")
 
 
@@ -367,6 +393,8 @@ layout = dbc.Container([
     Output(component_id="pnl_histogram", component_property="figure"),
     Input(component_id="model_select_dropdown", component_property="value"))
 def update_model_pnl_data(model_select_name):
+    df_ms = None
+    model_list_df = None
     return data_viz.pnl_histogram(df_ms, model_list_df, model_select_name)
 
 
@@ -374,7 +402,7 @@ def update_model_pnl_data(model_select_name):
     Output(component_id="trade_plan_weblink", component_property="src"),
     Input(component_id="trade_plan_select_dropdown", component_property="value"))
 def update_trade_plan_iframe(trade_plan_name):
-    for x in the_trade_plans:
+    for x in trade_tracker_html_docs:
         if x['name'] == trade_plan_name:
             return x['webViewLink']
 
@@ -400,7 +428,7 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
         end_date_object = date.fromisoformat(end_date)
     else:
         end_date_object = None
-    return data_viz.line_pnl(list(df_ms.values())[1],
+    return data_viz.line_pnl(list(total_position_df.values())[1],
                              visible_list=['DYTC Model Total', 'Long Always'],
                              start_date=start_date_object,
                              end_date=end_date_object,

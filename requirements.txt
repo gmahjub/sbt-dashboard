@@ -17,8 +17,7 @@ gunicorn
 
 #other
 datetime~=5.1
-
+boto3
 plotly~=5.14.1
-gspread~=5.8.0
 
 google-api-python-client

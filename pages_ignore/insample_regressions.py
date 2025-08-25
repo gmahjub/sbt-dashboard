@@ -19,7 +19,7 @@ gsheets_green = '#b7e1cd'
 neon_green = '#39FF14'
 lime_green = "#32CD32"
 
-dash.register_page(__name__, path='/SignalResssions', name='Signal Regressions') # Home Page
+# dash.register_page(__name__, path='/SignalResssions', name='Signal Regressions') # Home Page
 
 percentage = FormatTemplate.percentage(2)
 data_type_dict = {'Expected Return': ('numeric', percentage),
@@ -48,6 +48,13 @@ data_type_dict = {'Expected Return': ('numeric', percentage),
 #df_ms, update_time = get_data.get_model_signal_data('Prod-Dashboard Data', sheet_name='RealTime')
 df_ms, update_time = get_data.get_input_regression_data('hist_scen_analysis_out_LAB_fixed_total',
                                                         sheet_name='hist_scen_analysis_out_LAB_fixed_total')
+fcst_vars_list = ['FcstRsweigthed', 'FcstMean', 'FcstRrr', 'FcstStd', 'FcstCount', 'FcstPercPos',
+                  'HighR^2Ret', 'HighR^2Value', 'FcstPercRsfPos', 'FcstMeanPvalueTh', 'FcstStdPvalueTh',
+                  'PercPosPvalueTh', 'LowPvalueRet', 'LowPvalueValue', 'FcstMeanPv05ByR^2', 'FcstStdPv05ByR^2',
+                  'FcstRrrPv05ByR^2', 'FcstPercPosPv05ByR^2', 'FcstRsWeightedPv05ByR^2', 'FcstMeanPv10ByR^2',
+                  'FcstStdPv10ByR^2', 'FcstRrrPv10ByR^2', 'FcstPercPosPv10ByR^2', 'FcstRsWeightedPv10ByR^2']
+bq_values_list = [-1,0,1]
+bl_values_list = [-1,0,1]
 load_figure_template("lux")
 hist_scen_data_update_time = update_time
 ####################################
@@ -58,72 +65,46 @@ as_of = html.Em(children=f'Data as of {hist_scen_data_update_time}', className=(
 layout = dbc.Container([
     dbc.Row(as_of,class_name=('mb-4')),
     dbc.Row([
-            dbc.Col(
-                dcc.Graph(figure=data_viz.rate_volatility_line_chart(df_ms)),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=12,class_name=('mt-4')),
+        dbc.Col(
+            dcc.Dropdown(bq_values_list,
+                         'DYTC Model',
+                         id='bq_select_dropdown'
+            ),
+            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+        dbc.Col(
+            dcc.Dropdown(bl_values_list,
+                         'DYTC Model',
+                         id='bl_select_dropdown'
+            ),
+            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+        dbc.Col(
+            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
     ]),
     dbc.Row([
         dbc.Col(
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
-        dbc.Col(
             dcc.RangeSlider(
-                id='range-slider', min=-120, max=120, step=1, marks={-120: 'min', 120: 'max'}, value=[0.5, 2]
+                id='range-slider', min=0, max=0.99, step=0.09, marks={0.0: 'min', 0.99: 'max'}, value=[0.0, 0.09]
             ),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
     ]),
     dbc.Row([
         dbc.Col(
-            dcc.Graph(figure=data_viz.scat_rate_vol(df_ms, 'Rate Vol (AC)')),
+            dcc.Graph(id='fcst_var_scat_plot'),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
         dbc.Col(
             dcc.Graph(figure=data_viz.scat_rate_vol(df_ms,'Rate Vol (AB)')),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
     ]),
-    dbc.Row([
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_rate_vol_binning(df_ms, np.sum)),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_rate_vol_binning(df_ms, np.std)),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
-    ]),
-    dbc.Row([
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_rate_vol_binning(df_ms, np.mean)),
-            xs=12, sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
-        #dbc.Col(html.Iframe(src=rate_vol_notesObs[0]['webViewLink'],
-        #                    style={"height": "533px", "width": "100%"}),
-        #    xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4'))
-    ]),
-
-    dbc.Row([
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_rate_vol_binning(df_ms, np.sum, 'Rate Vol (AB)')),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_rate_vol_binning(df_ms, np.std, 'Rate Vol (AB)')),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
-    ]),
-
-    dbc.Row([
-        dbc.Col(
-            dcc.Graph(figure=data_viz.bar_plot_rate_vol_binning(df_ms, np.mean, 'Rate Vol (AB)')),
-            xs=12, sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
-        #dbc.Col(html.Iframe(id='rate_vol_ab_notesObs_weblink',
-        #                    style={"height": "533px", "width": "50%"}),
-        #    xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4'))
-    ]),
 ],
-                           fluid=True,
-                           className="dbc")
+    className="dbc", fluid=True)
+
 
 
 @callback(
-    Output(component_id="rate_volatility_graph", component_property="figure"),
-    Input(component_id="range-slider", component_property="value"))
-def update_range_slider(slider_range):
-    return data_viz.scat_rate_vol(df_ms, x_var='Rate Vol (AC)', y_var='Rate Vol (AB)', color_var='Market Direction',
-                                  size_var="Abs Day Return", title='Rate Vol Summary Scatter')
+    Output(component_id="fcst_var_scat_plot", component_property="figure"),
+    Input(component_id="range-slider", component_property="range_slider_value"))
+def update_range_slider(range_slider_value):
+    return data_viz.scat_fcst_var(df_ms, fcst_vars_list, range_slider_value, )
 
 
 #@callback(

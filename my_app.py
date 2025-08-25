@@ -1,33 +1,30 @@
 ####################################
 # IMPORTS
 ####################################
-import pandas as pd
-import datetime
-
 import dash
-from dash import dcc
 from dash import html
-from dash.dependencies import Input,Output
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import load_figure_template
 
-from pages import get_data
-from pages import data_viz
+skip_pages = ['pages/Equities.py', 'pages/scenario_display.py', 'pages/insample_regressions.py']
 
-skip_pages = ['Equities', 'scenario_display']
+from glob import glob
+
+# Include only .py files that don't start with an underscore (e.g., _hidden_page.py)
+my_pages = [f for f in glob('pages/**/*.py', recursive=True) if f not in skip_pages]
+
 
 ####################################
 # INIT APP
 ####################################
-dbc_css = ("https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css")
+dbc_css = "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css"
 app = dash.Dash(__name__,
                 external_stylesheets=[dbc.themes.LUX, dbc_css],
-                meta_tags=[{'name':'viewport',
-                            'content':'width=device-width,initial-scale=1.0'}],
-                use_pages=True
+                meta_tags=[{'name': 'viewport',
+                            'content': 'width=device-width,initial-scale=1.0'}],
+                use_pages=my_pages
                 )
-server=app.server
-
+server = app.server
 
 ####################################
 # SELECT TEMPLATE for the APP
@@ -35,34 +32,33 @@ server=app.server
 # loads the template and sets it as the default
 load_figure_template("lux")
 
-
 ####################################
 # Main Page layout
 ####################################
 
-title = html.H1(children="SB Trader Dashboard",
-                className=('text-center mt-4'),
-                style={'fontSize':36})
+title = html.H1(children="QFS Dashboard",
+                className='text-center mt-4',
+                style={'fontSize': 36})
 
 app.layout = html.Div(children=[
-        dbc.Row(title),
-        dbc.Row([html.Div(id='button',
-                          children=[dbc.Button(page['name'],href=page['path'])
-                                    for page in dash.page_registry.values() if page['name'] != 'Equities'
-                                    #for page in dash.page_registry.values() if page['name'] not in skip_pages
+    dbc.Row(title),
+    dbc.Row([html.Div(id='button',
+                      children=[dbc.Button(page['name'], href=page['path'])
+                                for page in dash.page_registry.values() if page['name'] != 'Equities'
+                                # for page in dash.page_registry.values() if page['name'] not in skip_pages
                                 ],
-                      className=('text-center mt-4 mb-4'),style={'fontSize':20})
-                 ]),
-        # Content page
-        dbc.Spinner(
-            dash.page_container,
-            fullscreen=True,
-            show_initially=True,
-            delay_hide=600,
-            type='border',
-            spinner_style={"width": "3rem", "height": "3rem"})
+                      className='text-center mt-4 mb-4', style={'fontSize': 20})
+             ]),
+    # Content page
+    dbc.Spinner(
+        dash.page_container,
+        fullscreen=True,
+        show_initially=True,
+        delay_hide=600,
+        type='border',
+        spinner_style={"width": "3rem", "height": "3rem"})
 
-        ])
+])
 
 #############################################################################
 
@@ -70,7 +66,7 @@ app.layout = html.Div(children=[
 # RUN the app
 ####################################
 if __name__ == '__main__':
-    server=app.server
+    server = app.server
     # setting this to debug = False as we are loading to GCP
-    #app.run_server(debug=True)
+    # app.run_server(debug=True)
     app.run_server(debug=False, host="0.0.0.0", port=8080)
