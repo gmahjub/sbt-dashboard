@@ -7,6 +7,7 @@ import os, io, pytz, re
 # import gspread
 import pandas as pd
 import boto3
+from botocore.exceptions import ClientError
 from datetime import datetime, timedelta, time, date
 # from google.auth.transport.requests import Request
 # from google.oauth2.credentials import Credentials
@@ -23,22 +24,58 @@ s3_client = boto3.client('s3')
 paginator = s3_client.get_paginator('list_objects_v2')
 
 
+def generate_s3_presigned_url(object_key, expiration_seconds=604800):
+    """
+    Generates a pre-signed URL for an S3 object.
+
+    Args:
+        bucket_name (str): The name of the S3 bucket.
+        object_key (str): The key (path and filename) of the S3 object.
+        expiration_seconds (int): The number of seconds the URL is valid for.
+
+    Returns:
+        str: The pre-signed URL, or None if an error occurred.
+    """
+    content_type = ''
+    if ".html" in object_key:
+        content_type = "text/html"
+    try:
+        url = s3_client.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={'Bucket': S3_BUCKET_NAME, 'Key': object_key, 'ResponseContentType': content_type},
+            ExpiresIn=expiration_seconds
+        )
+    except ClientError as e:
+        print(f"Error generating pre-signed URL: {e}")
+        return None
+    return url
+
+
 def create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False):
 
     temp_list = list(position_pnl_df.columns)
     temp_list.remove('WriteTime')
     temp_list.remove('Unnamed: 0')
+    position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['PnlTimestamp']), temp_list] = (
+        position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['PnlTimestamp']), temp_list].fillna(''))
     position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['Con_Pos', 'DailyPnL', 'UnrealizedPnL', 'RealizedPnL:',
                                                             'RealizedPnL', 'Value']), temp_list] = \
         (position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['Con_Pos', 'DailyPnL', 'UnrealizedPnL', 'RealizedPnL:',
-                                                                 'Value']), temp_list].astype(float))
+                                                                 'RealizedPnL', 'Value']), temp_list].astype(float))
     position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['Con_Pos', 'DailyPnL', 'UnrealizedPnL', 'RealizedPnL:',
                                                             'RealizedPnL', 'Value']), temp_list] = np.where(
         position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['Con_Pos', 'DailyPnL', 'UnrealizedPnL', 'RealizedPnL:',
                                                                 'RealizedPnL', 'Value']), temp_list] > 1e300, 0.0,
         position_pnl_df.loc[position_pnl_df['Unnamed: 0'].isin(['Con_Pos', 'DailyPnL', 'UnrealizedPnL', 'RealizedPnL:',
                                                                 'RealizedPnL', 'Value']), temp_list])
-    position_pnl_df = position_pnl_df.assign(Total=position_pnl_df[temp_list].sum(axis=1))
+
+    # for row_idx, row in position_pnl_df[temp_list].iterrows():
+    #     try:
+    #         row_sum = row.sum()
+    #     except Exception as e:
+    #         print("found it")
+
+    position_pnl_df = position_pnl_df.assign(Total=position_pnl_df[temp_list].fillna(0.0).sum(axis=1))
     # temp_pp_df = position_pnl_df[temp_list].sum(axis=0)
     # temp_pp_df = temp_pp_df.assign(Total=temp_pp_df[temp_list].sum(axis=1))
 
@@ -88,16 +125,19 @@ def create_total_position_df(position_df, avg_cost_df, position_pnl_df, transpos
 
 def get_trade_tracker_html_docs():
 
+    # get the list of available html file names
     pattern_match_for_pagin = f'QFS_'
     pattern_match = re.compile(r'TradeTrackerApp.*\.html$')
     pages = paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=pattern_match_for_pagin)
-    available_tta_html_list = []
+    available_html_doc_dict = {}
     for page in pages:
         if 'Contents' in page:
             for obj in page['Contents']:
                 if pattern_match.search(obj['Key']):
-                    available_tta_html_list.append(obj['Key'])
-    return available_tta_html_list
+                    # available_tta_html_list.append(obj['Key'])
+                    link_to_s3_obj = generate_s3_presigned_url(obj['Key'])
+                    available_html_doc_dict[obj['Key']] = link_to_s3_obj
+    return available_html_doc_dict
 
 
 def get_file_type_dates(data_type='positions', acct_num=None):

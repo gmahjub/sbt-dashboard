@@ -18,6 +18,7 @@ gunicorn
 #other
 datetime~=5.1
 boto3
+botocore
 plotly~=5.14.1
 
 google-api-python-client

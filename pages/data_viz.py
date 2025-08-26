@@ -632,74 +632,26 @@ def pnl_histogram(df_ms, model_list_df, model_name):
 
 
 def line_pnl(df, visible_list, start_date=None, end_date=None,
-             year_filter=None, rolling_perf_flag=True):
+             year_filter=None, rolling_perf_flag=True, title='Daily Pnl Tracker'):
     '''
     Plot models' pnl against being long always
     '''
 
-    max_visualization_data = 90
-    zeroed = False
-    data = df[['Date', 'DYTC Model Total', 'Fundamental Model Total', '5-D Long Model Total',
-               '5-D Long Cumm Model Total', 'SPY(CM) Total, ES Pts', 'SPY(AH) Total, ES Pts', 'Long Always']].copy()
-    if year_filter != 'All':
-        filtered_data = data[pd.to_datetime(data.Date).dt.year == int(year_filter)].copy(deep=True)
-        if filtered_data.Date.iloc[-1] - timedelta(days=1) == date(filtered_data.Date.iloc[-1].year, 1, 1):
-            # if this is the new year, then we need to get the last day of the previous year
-            last_row_prev_year = data[pd.to_datetime(data.Date).dt.year == int(year_filter - 1)].iloc[0]
-            filtered_data.loc[last_row_prev_year.name] = last_row_prev_year
-        if len(filtered_data) > max_visualization_data:
-            filtered_data = filtered_data.truncate(before=len(filtered_data) - (max_visualization_data - 1))
-            truncated_first_index = filtered_data.index[-1]
-            filtered_data['DYTC Model Total'] = filtered_data['DYTC Model Total'] - data.loc[truncated_first_index][
-                'DYTC Model Total']
-            filtered_data['Long Always'] = filtered_data['Long Always'] - data.loc[truncated_first_index]['Long Always']
-            zeroed = True
-    elif start_date is not None and end_date is not None:
-        filtered_data = data[(data.Date >= start_date) & (data.Date <= end_date)].copy(deep=True)
-        first_index = filtered_data.index[-1] - 1
-        if len(filtered_data) > max_visualization_data:
-            filtered_data = filtered_data.truncate(before=len(filtered_data) - max_visualization_data)
-            truncated_first_index = filtered_data.index[-1] - 1
-            filtered_data['DYTC Model Total'] = filtered_data['DYTC Model Total'] - data.loc[truncated_first_index][
-                'DYTC Model Total']
-            filtered_data['Long Always'] = filtered_data['Long Always'] - data.loc[truncated_first_index]['Long Always']
-            zeroed = True
-        if start_date != data.iloc[data.index[0]].Date:
-            prev_tally_dytc = data.loc[first_index]['DYTC Model Total']
-            prev_tally_long_always = data.loc[first_index]['Long Always']
-            prev_tally_fundamental = data.loc[first_index]['Fundamental Model Total']
-            prev_tally_5d_long = data.loc[first_index]['5-D Long Model Total']
-            prev_tally_5d_long_cumm = data.loc[first_index]['5-D Long Cumm Model Total']
-            prev_tally_spy_cm = data.loc[first_index]['SPY(CM) Total, ES Pts']
-            prev_tally_spy_ah = data.loc[first_index]['SPY(AH) Total, ES Pts']
-            filtered_data['DYTC Model Total'] = filtered_data['DYTC Model Total'] - prev_tally_dytc
-            filtered_data['Long Always'] = filtered_data['Long Always'] - prev_tally_long_always
-            filtered_data['Fundamental Model Total'] = filtered_data['Fundamental Model Total'] - prev_tally_fundamental
-            filtered_data['5-D Long Model Total'] = filtered_data['5-D Long Model Total'] - prev_tally_5d_long
-            filtered_data['5-D Long Cumm Model Total'] = filtered_data['5-D Long Cumm Model Total'] - \
-                                                         prev_tally_5d_long_cumm
-            filtered_data['SPY(CM) Total, ES Pts'] = filtered_data['SPY(CM) Total, ES Pts'] - prev_tally_spy_cm
-            filtered_data['SPY(AH) Total, ES Pts'] = filtered_data['SPY(AH) Total, ES Pts'] - prev_tally_spy_ah
-            zeroed = True
-    elif start_date is None and end_date is not None:
-        filtered_data = data[(data.Date <= end_date)].copy(deep=True)
-    elif start_date is not None and end_date is None:
-        filtered_data = data[(data.Date >= start_date)].copy(deep=True)
-    elif start_date is None and end_date is None:
+    # max_visualization_data = 90
+    # zeroed = False
+    if df.index.name == 'WriteTime':
+        df.reset_index(inplace=True)
+    df.WriteTime = pd.to_datetime(df.WriteTime)
+    data = df[['WriteTime', 'DailyPnL']]
+    filtered_data = data
+    if start_date is None and end_date is None:
         filtered_data = data.copy(deep=True)
-    if len(rolling_perf_flag) != 0 and len(filtered_data) > 0 and not zeroed:
-        # if rolling_perf_flag[0] == 'Rolling Performance' and len(filtered_data) > 0:
-        # add a column for DYTC rolling performance.
-        first_index = filtered_data.index[-1]
-        filtered_data['DYTC Model Total'] = filtered_data['DYTC Model Total'] - data.loc[first_index][
-            'DYTC Model Total']
-        filtered_data['Long Always'] = filtered_data['Long Always'] - data.loc[first_index]['Long Always']
-    filtered_data.set_index('Date', inplace=True)
+    filtered_data.set_index('WriteTime', inplace=True)
     fig = px.line(filtered_data,
                   y=filtered_data.columns,
                   x=filtered_data.index,
                   color_discrete_sequence=px.colors.qualitative.Plotly,
-                  title=f'90-Day Model Performance | ES Futures Contract'
+                  title=f'{title}'
                   ).update_traces(visible='legendonly', selector=lambda t: not t.name in visible_list)
     fig.add_hline(y=0.0,
                   line_width=3,
