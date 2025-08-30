@@ -2,9 +2,23 @@
 # IMPORTS
 ####################################
 import dash
-from dash import html
+from dash import html, Dash
 import dash_bootstrap_components as dbc
+import dash_core_components as dcc
 from dash_bootstrap_templates import load_figure_template
+from flask import Flask
+from flask_restful import Resource, Api
+
+
+class HealthCheck(Resource):
+    def get(self):
+        return {'up': 'OK'}
+
+
+server = Flask('qfs_dash')
+app = Dash(server=server)
+api = Api(server)
+api.add_resource(HealthCheck, '/health')
 
 skip_pages = ['pages/Equities.py', 'pages/scenario_display.py', 'pages/insample_regressions.py']
 
@@ -41,6 +55,7 @@ title = html.H1(children="QFS Dashboard",
                 style={'fontSize': 36})
 
 app.layout = html.Div(children=[
+    dcc.Store(id='intermediate-value'),
     dbc.Row(title),
     dbc.Row([html.Div(id='button',
                       children=[dbc.Button(page['name'], href=page['path'])
@@ -69,4 +84,4 @@ if __name__ == '__main__':
     server = app.server
     # setting this to debug = False as we are loading to GCP
     # app.run_server(debug=True)
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    app.run(debug=True, host="0.0.0.0", port=8050)

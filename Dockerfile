@@ -12,7 +12,7 @@ ENV DEFAULT_ACCT_NUM DU9822977
 # install production dependencies.
 RUN pip install -r requirements.txt
 
-EXPOSE 8080
+EXPOSE 8050
 #EXPOSE $PORT
 
-CMD python my_app.py
+CMD ["python", "qfs_dash_app.py"]

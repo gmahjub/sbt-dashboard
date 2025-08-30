@@ -20,5 +20,8 @@ datetime~=5.1
 boto3
 botocore
 plotly~=5.14.1
-
+flask
+flask-restful
+aws-cdk-lib==2.208.0
+constructs>=10.0.0,<11.0.0
 google-api-python-client
