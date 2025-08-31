@@ -145,7 +145,7 @@ led_display = daq.LEDDisplay(
     id="daily-pnl-display",
     value="0.00",
     label={
-        "label": "Daily P&L (since last settle)",
+        "label": "Portfolio P&L (since last settle)",
         "style": {"font-size": "1.6rem", "text-align": "center"},
     },
     backgroundColor="black",
