@@ -2,10 +2,11 @@
 # IMPORTS
 ####################################
 
-import dash, os, json
+import dash, os, json, re
 from dash import dcc, html, dash_table, callback, ctx
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
+import dash_daq as daq
 from dash_bootstrap_templates import load_figure_template
 from dash.dash_table import FormatTemplate
 from pages import get_data
@@ -20,7 +21,7 @@ gsheets_green = '#b7e1cd'
 neon_green = '#39FF14'
 lime_green = "#32CD32"
 
-today_dt_date = datetime.now()
+today_dt_date = datetime.now()-timedelta(days=2)
 today_str_date = today_dt_date.strftime("%Y%m%d")
 
 trade_tracker_categories = ['USEquity', 'G10Currency', 'Metals', 'UsTreasuries', 'Energy']
@@ -140,6 +141,19 @@ rates_update_time = position_update_time
 as_of = html.Em(children=f'Data as of {rates_update_time}',
                 className=('text-center'))
 
+led_display = daq.LEDDisplay(
+    id="daily-pnl-display",
+    value="0.00",
+    label={
+        "label": "Daily P&L (since last settle)",
+        "style": {"font-size": "1.6rem", "text-align": "center"},
+    },
+    backgroundColor="black",
+    color="red",
+    labelPosition="bottom",
+    size=50,
+)
+
 layout = dbc.Container([
     dbc.Row(as_of,class_name=('mb-4')),
     dbc.Row([
@@ -178,7 +192,12 @@ layout = dbc.Container([
             ),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
     ]),
-
+    dbc.Row(
+        [
+            dbc.Col([led_display], lg=6, style=dict(textAlign="center"))],
+        justify="center",
+        className="mt-4",
+    ),
     dbc.Row([
             dbc.Col(
                 # dcc.Graph(id='output-container-date-picker-range'),
@@ -542,13 +561,13 @@ def update_contract_pnl_graph(the_con):
     return a_fig
 
 
-@callback(Input('refresh-button', component_property='n_clicks'))
-def refresh_page_date():
+#@callback(Input('refresh-button', component_property='n_clicks'))
+#def refresh_page_date():
 
-    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='pnltracker',
-                                                                            acct_num=default_acct_num)
-    ret_fig = data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL'])
+#    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+#                                                                            data_type='pnltracker',
+#                                                                            acct_num=default_acct_num)
+#    ret_fig = data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL'])
 
 
 
@@ -581,6 +600,20 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
                              end_date=end_date_object,
                              year_filter=year_filter,
                              rolling_perf_flag=rolling_perf_flag)
+
+
+@callback(Output('daily-pnl-display', 'value'),
+          Input('interval-component', 'n_intervals'))
+def update_data(n):
+
+    today_dt_date = datetime.now() - timedelta(days=2)
+    today_str_date = today_dt_date.strftime("%Y%m%d")
+    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                            data_type='pnltracker',
+                                                                            acct_num=default_acct_num)
+    amount = pnl_tracker_df['DailyPnL'].iloc[-1]
+    formatted_amt = f"{amount:.2f}"
+    return formatted_amt
 
 
 @callback(Output('intermediate-value', 'data'),
@@ -642,3 +675,15 @@ def clean_data(n_clicks):
     }
 
     return json.dumps(the_store_data)
+
+
+@callback(
+    Output('daily-pnl-display', 'color'),
+    [Input('daily-pnl-display', 'value')]
+)
+def update_led_color(value):
+    cleaned_float_value = float(re.sub(r'[^\d.-]', '', value))
+    if cleaned_float_value < 0.0:
+        return 'red'
+    else:
+        return 'green'

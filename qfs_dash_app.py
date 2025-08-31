@@ -4,7 +4,8 @@
 import dash
 from dash import html, Dash
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
+# import dash_core_components as dcc
+from dash import dcc
 from dash_bootstrap_templates import load_figure_template
 from flask import Flask
 from flask_restful import Resource, Api
@@ -55,6 +56,7 @@ title = html.H1(children="QFS Dashboard",
                 style={'fontSize': 36})
 
 app.layout = html.Div(children=[
+    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
     dcc.Store(id='intermediate-value'),
     dbc.Row(title),
     dbc.Row([html.Div(id='button',
@@ -69,7 +71,8 @@ app.layout = html.Div(children=[
         dash.page_container,
         fullscreen=True,
         show_initially=True,
-        delay_hide=600,
+        #delay_hide=600,
+        delay_show=600,
         type='border',
         spinner_style={"width": "3rem", "height": "3rem"})
 
