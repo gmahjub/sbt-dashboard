@@ -21,7 +21,7 @@ gsheets_green = '#b7e1cd'
 neon_green = '#39FF14'
 lime_green = "#32CD32"
 
-today_dt_date = datetime.now()-timedelta(days=2)
+today_dt_date = datetime.now()
 today_str_date = today_dt_date.strftime("%Y%m%d")
 
 trade_tracker_categories = ['USEquity', 'G10Currency', 'Metals', 'UsTreasuries', 'Energy']
@@ -82,7 +82,7 @@ data_type_dict = {'Timestamp': ('datetime', None),
 # df_ms, update_time = get_data.get_model_signal_data('Prod-Dashboard Data', sheet_name='RealTime')
 init_fills_df, init_fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                             dt_date=today_dt_date,
-                                                            data_type='fills',
+                                                            data_type='fills_',
                                                             acct_num=default_acct_num)
 if init_fills_df is None and init_fills_update_time is None:
     # we don't have any fills for the str_date that was input
@@ -90,26 +90,28 @@ if init_fills_df is None and init_fills_update_time is None:
 init_to_display_fills_df = init_fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
                                 'Price', 'AvgPrice', 'CumQty']].copy()
 init_open_orders_df, init_open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                        data_type='open_orders',
+                                                                        data_type='open_orders_',
                                                                         acct_num=default_acct_num)
 init_to_display_open_orders_df = (
     init_open_orders_df[['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy())
 init_position_pnl_df, init_position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                          data_type='position_pnl',
+                                                                          data_type='position_pnl_',
                                                                           acct_num=default_acct_num)
+init_margin_req_df, init_margin_req_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='',
+                                                   acct_num=default_acct_num)
 init_position_df, init_position_update_time = (
     get_data.get_any_data_type_df(str_date=today_str_date, acct_num=default_acct_num))
 init_avg_cost_df, init_avg_cost_update_time = (
-    get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost', acct_num=default_acct_num))
+    get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_', acct_num=default_acct_num))
 init_pnl_tracker_df, init_pnl_tracker_update_time = (
-    get_data.get_any_data_type_df(str_date=today_str_date, data_type='pnltracker', acct_num=default_acct_num))
+    get_data.get_any_data_type_df(str_date=today_str_date, data_type='pnltracker_', acct_num=default_acct_num))
 init_daily_pnl_timeseries_df, init_unrealized_pnl_timeseries_df, init_position_pnl_df = (
     get_data.create_daily_timeseries(init_position_df, init_avg_cost_df, init_position_pnl_df, transposed=False))
 curr_avail_pos_pnl_con_list = init_daily_pnl_timeseries_df.columns.get_level_values(0).unique()
 init_total_position_df = get_data.create_total_position_df(init_position_df, init_avg_cost_df, init_position_pnl_df, transposed=False)
 init_total_position_df = init_total_position_df.reset_index().rename(columns={'index': 'Contract'})
-init_available_position_dates = get_data.get_file_type_dates(data_type='positions', acct_num=default_acct_num)
-init_available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker', acct_num=default_acct_num)
+init_available_position_dates = get_data.get_file_type_dates(data_type='positions_', acct_num=default_acct_num)
+init_available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker_', acct_num=default_acct_num)
 init_trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
 # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
 tthdd_keys, tthdd_values = zip(*init_trade_tracker_html_doc_dict.items())
@@ -152,7 +154,33 @@ led_display = daq.LEDDisplay(
     backgroundColor="black",
     color="red",
     labelPosition="bottom",
-    size=50,
+    size=40,
+)
+
+led_display_margin = daq.LEDDisplay(
+    id="margin-display",
+    value="0.00",
+    label={
+        "label": "Portfolio Initial Margin",
+        "style": {"font-size": "1.6rem", "text-align": "center"},
+    },
+    backgroundColor="black",
+    color="green",
+    labelPosition="bottom",
+    size=40,
+)
+
+led_display_ret_on_margin = daq.LEDDisplay(
+    id="ret-on-margin-display",
+    value="0.00",
+    label={
+        "label": "Return on (Init) Margin, %",
+        "style": {"font-size": "1.6rem", "text-align": "center"},
+    },
+    backgroundColor="black",
+    color="red",
+    labelPosition="bottom",
+    size=40,
 )
 
 layout = dbc.Container([
@@ -170,6 +198,14 @@ layout = dbc.Container([
                           id='rolling_performance_flag'),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
     ]),
+    dbc.Row(
+        [
+            dbc.Col([led_display], lg=4, style=dict(textAlign="center")),
+            dbc.Col([led_display_margin], lg=4, style=dict(textAlign="center")),
+            dbc.Col([led_display_ret_on_margin], lg=4, style=dict(textAlign="center"))],
+        justify="left",
+        className="mt-4",
+    ),
     dbc.Row([
         dbc.Col(
             dcc.DatePickerRange(id='my-date-picker-range',
@@ -184,33 +220,35 @@ layout = dbc.Container([
             #html.Div(id='output-container-date-picker-range'),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
         dbc.Col(
-            html.Button('Reset', id='reset-button', n_clicks=0),
+
+            html.Button('Refresh', id='reset-button', n_clicks=0),
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=2,class_name=('mt-4')),
-        dbc.Col(
+        dbc.Col([
+            dbc.Label("Select a Contract:", style=dict(textAlign='right')),
             dcc.Dropdown(curr_avail_pos_pnl_con_list,
                          curr_avail_pos_pnl_con_list[0],
                          id='pos_pnl_select_dropdown'
-            ),
+            )],
+
             xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
     ]),
-    dbc.Row(
-        [
-            dbc.Col([led_display], lg=6, style=dict(textAlign="center"))],
-        justify="center",
-        className="mt-4",
-    ),
     dbc.Row([
             dbc.Col(
                 dcc.Graph(id='output-container-date-picker-range'),
                 #dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
                 #                                   visible_list=['DailyPnL'])),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
+                xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+            dbc.Col(
+                dcc.Graph(id='ret-on-margin-figure'),
+                #dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
+                #                                   visible_list=['DailyPnL'])),
+                xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
             dbc.Col(
                 #dcc.Graph(figure=data_viz.line_pnl(daily_pnl_timeseries_df, visible_list=['DailyPnL'])),
                 # dcc.Graph(figure=data_viz.line_pnl(daily_pnl_timeseries_df['6JU5'], visible_list=['DailyPnL'])),
                 dcc.Graph(id='contract_pnl_figure'),
                 # dcc.Graph(id='pnl_histogram'),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,className=('mt-4')),
+                xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,className=('mt-4')),
 
     ]),
     # dbc.Row([
@@ -561,11 +599,11 @@ def update_contract_pnl_graph(the_con):
     # if triggered_id == 'pos_pnl_select_dropdown':
     # return data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL'])
     position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                              data_type='position_pnl',
+                                                                              data_type='position_pnl_',
                                                                               acct_num=default_acct_num)
     position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                       acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost',
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
                                                                       acct_num=default_acct_num)
     daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
         get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
@@ -611,39 +649,52 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
     Output(component_id='total-position-table', component_property='data'),
     Output(component_id='open-orders-table', component_property='data'),
     Output(component_id='order-fills-table', component_property='data'),
-    Input('interval-component', 'n_intervals')
+    Output(component_id='margin-display', component_property='value'),
+    Output(component_id='ret-on-margin-display', component_property='value'),
+    Output(component_id='ret-on-margin-figure', component_property='figure'),
+    Input('interval-component', 'n_intervals'),
 )
 def update_data(n):
 
-    today_dt_date = datetime.now() - timedelta(days=2)
+    today_dt_date = datetime.now()
     today_str_date = today_dt_date.strftime("%Y%m%d")
+    margin_req_df, margin_req_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                          data_type='',
+                                                                          acct_num=default_acct_num)
+    rom = margin_req_df.DailyPnL.astype(float)/margin_req_df.InitMarginReq.astype(float)*100.0
+    margin_req_df = margin_req_df.assign(ReturnOnInitMargin=rom)
     pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='pnltracker',
+                                                                            data_type='pnltracker_',
                                                                             acct_num=default_acct_num)
     position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                       acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost',
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
                                                                       acct_num=default_acct_num)
     position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                              data_type='position_pnl',
+                                                                              data_type='position_pnl_',
                                                                               acct_num=default_acct_num)
     open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='open_orders',
+                                                                            data_type='open_orders_',
                                                                             acct_num=default_acct_num)
     to_display_open_orders_df = open_orders_df[
         ['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy()
     fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                 dt_date=today_dt_date,
-                                                                data_type='fills',
+                                                                data_type='fills_',
                                                                 acct_num=default_acct_num)
     to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
                                     'Price', 'AvgPrice', 'CumQty']].copy()
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
     amount = pnl_tracker_df['DailyPnL'].iloc[-1]
     formatted_amt = f"{amount:.2f}"
+    margin_amt = margin_req_df['InitMarginReq'].iloc[-1]
+    ret_on_margin = float(amount) / float(margin_amt) * 100.0
+    formatted_rom = f"{ret_on_margin:.2f}"
+    formatted_margin_amt = f"{margin_amt:.2f}"
     return (formatted_amt, data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL']),
             total_position_df.to_dict('records'), to_display_open_orders_df.to_dict('records'),
-            to_display_fills_df.to_dict('records'))
+            to_display_fills_df.to_dict('records'), formatted_margin_amt, formatted_rom,
+            data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'))
 
 
 @callback(Output('intermediate-value', 'data'),
@@ -655,12 +706,12 @@ def clean_data(n_clicks):
 
     fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                 dt_date=today_dt_date,
-                                                                data_type='fills',
+                                                                data_type='fills_',
                                                                 acct_num=default_acct_num)
     to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
                                     'Price', 'AvgPrice', 'CumQty']].copy()
     open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='open_orders',
+                                                                            data_type='open_orders_',
                                                                             acct_num=default_acct_num)
     to_display_open_orders_df = open_orders_df[
         ['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy()
@@ -669,18 +720,18 @@ def clean_data(n_clicks):
                                                                               acct_num=default_acct_num)
     position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                       acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost',
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
                                                                       acct_num=default_acct_num)
     pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='pnltracker',
+                                                                            data_type='pnltracker_',
                                                                             acct_num=default_acct_num)
     daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
         get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
     curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique()
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
     total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
-    available_position_dates = get_data.get_file_type_dates(data_type='positions', acct_num=default_acct_num)
-    available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker', acct_num=default_acct_num)
+    available_position_dates = get_data.get_file_type_dates(data_type='positions_', acct_num=default_acct_num)
+    available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker_', acct_num=default_acct_num)
     trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
     # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
     tthdd_keys, tthdd_values = zip(*trade_tracker_html_doc_dict.items())
@@ -709,11 +760,16 @@ def clean_data(n_clicks):
 
 @callback(
     Output('daily-pnl-display', 'color'),
-    [Input('daily-pnl-display', 'value')]
+    Output('ret-on-margin-display', component_property='color'),
+    [Input('daily-pnl-display', 'value'),
+     Input(component_id='ret-on-margin-display', component_property='value')]
 )
-def update_led_color(value):
+def update_led_color(value, rom_value):
     cleaned_float_value = float(re.sub(r'[^\d.-]', '', value))
+    cleaned_float_rom_value = float(re.sub(r'[^\d.-]', '', rom_value))
+    rom_color, pnl_color = 'green', 'green'
     if cleaned_float_value < 0.0:
-        return 'red'
-    else:
-        return 'green'
+        pnl_color = 'red'
+    if cleaned_float_rom_value < 0.0:
+        rom_color = 'red'
+    return pnl_color, rom_color

@@ -56,7 +56,7 @@ title = html.H1(children="QFS Dashboard",
                 style={'fontSize': 36})
 
 app.layout = html.Div(children=[
-    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
+    dcc.Interval(id='interval-component', interval=30*1000, n_intervals=0),
     dcc.Store(id='intermediate-value'),
     dbc.Row(title),
     dbc.Row([html.Div(id='button',

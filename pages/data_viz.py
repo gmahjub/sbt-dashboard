@@ -642,7 +642,7 @@ def line_pnl(df, visible_list, start_date=None, end_date=None,
     if df.index.name == 'WriteTime':
         df.reset_index(inplace=True)
     df.WriteTime = pd.to_datetime(df.WriteTime)
-    data = df[['WriteTime', 'DailyPnL']]
+    data = df[['WriteTime'] + visible_list]
     filtered_data = data
     if start_date is None and end_date is None:
         filtered_data = data.copy(deep=True)

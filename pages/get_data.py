@@ -146,7 +146,7 @@ def get_file_type_dates(data_type='positions', acct_num=None):
     if acct_num is None:
         acct_num = os.getenv('DEFAULT_BROKER_ACCT_NUM')
 
-    pattern_match = f'{acct_num}_{data_type}_'
+    pattern_match = f'{acct_num}_{data_type}'
     pages = paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=pattern_match)
     available_dates_list = []
     for page in pages:
@@ -161,11 +161,11 @@ def get_file_type_dates(data_type='positions', acct_num=None):
     return available_dates_list
 
 
-def get_any_data_type_df(str_date, dt_date=None, data_type='positions', acct_num=None):
+def get_any_data_type_df(str_date, dt_date=None, data_type='positions_', acct_num=None):
 
     if acct_num is None:
         acct_num = os.getenv('DEFAULT_BROKER_ACCT_NUM')
-    total_pos_fn = f'{acct_num}_{data_type}_{str_date}.csv'
+    total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
 
     object_s3 = None
     while object_s3 is None:
@@ -175,9 +175,9 @@ def get_any_data_type_df(str_date, dt_date=None, data_type='positions', acct_num
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
                 # the file does not exist in the bucket
-                dt_date = (dt_date - timedelta(days=2))
+                # dt_date = (dt_date - timedelta(days=2))
                 str_date = dt_date.strftime("%Y%m%d")
-                total_pos_fn = f'{acct_num}_{data_type}_{str_date}.csv'
+                total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
 
     object_csv = object_s3['Body'].read().decode('utf-8')
     csv_file = io.StringIO(object_csv)
