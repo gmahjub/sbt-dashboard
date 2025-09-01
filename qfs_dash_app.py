@@ -72,7 +72,7 @@ app.layout = html.Div(children=[
         fullscreen=True,
         show_initially=True,
         #delay_hide=600,
-        delay_show=600,
+        delay_show=1000,
         type='border',
         spinner_style={"width": "3rem", "height": "3rem"})
 
