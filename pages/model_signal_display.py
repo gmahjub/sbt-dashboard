@@ -685,6 +685,7 @@ def update_data(n):
     to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
                                     'Price', 'AvgPrice', 'CumQty']].copy()
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
+    total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
     amount = pnl_tracker_df['DailyPnL'].iloc[-1]
     formatted_amt = f"{amount:.2f}"
     margin_amt = margin_req_df['InitMarginReq'].iloc[-1]

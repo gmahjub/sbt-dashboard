@@ -175,7 +175,7 @@ def get_any_data_type_df(str_date, dt_date=None, data_type='positions_', acct_nu
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
                 # the file does not exist in the bucket
-                # dt_date = (dt_date - timedelta(days=2))
+                dt_date = (dt_date - timedelta(days=1))
                 str_date = dt_date.strftime("%Y%m%d")
                 total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
 
