@@ -11,7 +11,7 @@ from dash_bootstrap_templates import load_figure_template
 from dash.dash_table import FormatTemplate
 from pages import get_data
 from pages import data_viz
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, time
 import pandas as pd
 
 default_acct_num = os.getenv("DEFAULT_BROKER_ACCT_NUM")
@@ -26,7 +26,7 @@ today_str_date = today_dt_date.strftime("%Y%m%d")
 
 trade_tracker_categories = ['USEquity', 'G10Currency', 'Metals', 'UsTreasuries', 'Energy']
 
-dash.register_page(__name__, path='/', name='Model Main') # Home Page
+dash.register_page(__name__, path='/', name='Model Main')  # Home Page
 
 percentage = FormatTemplate.percentage(2)
 data_type_dict = {'Timestamp': ('datetime', None),
@@ -75,45 +75,51 @@ data_type_dict = {'Timestamp': ('datetime', None),
                   'AvgPrice': ('numeric', None),
                   }
 
-
 ####################################
 # Load data & dfs
 ####################################
 # df_ms, update_time = get_data.get_model_signal_data('Prod-Dashboard Data', sheet_name='RealTime')
 init_fills_df, init_fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                            dt_date=today_dt_date,
-                                                            data_type='fills_',
-                                                            acct_num=default_acct_num)
+                                                                      dt_date=today_dt_date,
+                                                                      data_type='fills_',
+                                                                      acct_num=default_acct_num)
 if init_fills_df is None and init_fills_update_time is None:
     # we don't have any fills for the str_date that was input
     fills_df = pd.DataFrame()
-init_to_display_fills_df = init_fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
-                                'Price', 'AvgPrice', 'CumQty']].copy()
+init_to_display_fills_df = init_fills_df[
+    ['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
+     'Price', 'AvgPrice', 'CumQty']].copy()
 init_open_orders_df, init_open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                        data_type='open_orders_',
-                                                                        acct_num=default_acct_num)
+                                                                                  data_type='open_orders_',
+                                                                                  acct_num=default_acct_num)
 init_to_display_open_orders_df = (
     init_open_orders_df[['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy())
 init_position_pnl_df, init_position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                          data_type='position_pnl_',
-                                                                          acct_num=default_acct_num)
+                                                                                    data_type='position_pnl_',
+                                                                                    acct_num=default_acct_num)
 init_margin_req_df, init_margin_req_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='',
-                                                   acct_num=default_acct_num)
+                                                                                acct_num=default_acct_num)
 init_position_df, init_position_update_time = (
     get_data.get_any_data_type_df(str_date=today_str_date, acct_num=default_acct_num))
 init_avg_cost_df, init_avg_cost_update_time = (
     get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_', acct_num=default_acct_num))
-init_pnl_tracker_df, init_pnl_tracker_update_time = (
-    get_data.get_any_data_type_df(str_date=today_str_date, data_type='pnltracker_', acct_num=default_acct_num))
+# init_pnl_tracker_df, init_pnl_tracker_update_time = (
+#     get_data.get_any_data_type_df(str_date=today_str_date, data_type='pnltracker_', acct_num=default_acct_num))
 init_daily_pnl_timeseries_df, init_unrealized_pnl_timeseries_df, init_position_pnl_df = (
     get_data.create_daily_timeseries(init_position_df, init_avg_cost_df, init_position_pnl_df, transposed=False))
 curr_avail_pos_pnl_con_list = init_daily_pnl_timeseries_df.columns.get_level_values(0).unique()
-init_total_position_df = get_data.create_total_position_df(init_position_df, init_avg_cost_df, init_position_pnl_df, transposed=False)
+init_total_position_df = get_data.create_total_position_df(init_position_df, init_avg_cost_df,
+                                                           init_position_pnl_df, transposed=False)
 init_total_position_df = init_total_position_df.reset_index().rename(columns={'index': 'Contract'})
 init_available_position_dates = get_data.get_file_type_dates(data_type='positions_', acct_num=default_acct_num)
 init_available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker_', acct_num=default_acct_num)
 init_trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
-# get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
+init_qfs_signals_df, init_qfs_signals_update_time = (
+    get_data.get_any_data_type_df(data_type='QFS_DailySignals_',
+                                  acct_num=default_acct_num,
+                                  str_date=today_str_date,
+                                  dt_date=today_dt_date + timedelta(days=1)))
+# # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
 tthdd_keys, tthdd_values = zip(*init_trade_tracker_html_doc_dict.items())
 init_trade_tracker_html_doc_dict =\
     dict(zip(tthdd_keys[len(trade_tracker_categories)*-1:], tthdd_values[len(trade_tracker_categories)*-1:]))
@@ -132,16 +138,16 @@ prelim_signal_nc_str = "name contains 'Prelim Signal' and name contains 'SB Trad
 # the_prelim_signals = get_data.get_trade_plans(name_contains=prelim_signal_nc_str)
 # signal_integrity_df = get_data.create_integrity_df(df_ms, the_trade_plans, the_final_signals, the_prelim_signals)
 # risk_event_analysis_df, rea_data_type_dict = get_data.create_re_analysis_df(df_ms)
-df = get_data.get_rates()
+# df = get_data.get_rates()
 load_figure_template("lux")
 # rates_update_time = df.index[-1].strftime("%b-%Y")
-rates_update_time = init_position_update_time
+# rates_update_time = init_position_update_time
 # rates_update_time = df.index[-1].strftime("%b-%Y")
 
 ####################################
 # Page layout
 ####################################
-as_of = html.Em(children=f'Data as of {rates_update_time}',
+as_of = html.Em(children=f'Data as of {datetime.now()}',
                 className=('text-center'))
 
 led_display = daq.LEDDisplay(
@@ -184,19 +190,19 @@ led_display_ret_on_margin = daq.LEDDisplay(
 )
 
 layout = dbc.Container([
-    dbc.Row(as_of,class_name=('mb-4')),
+    dbc.Row(as_of, class_name=('mb-4')),
     dbc.Row([
         dbc.Col(
             dcc.Dropdown(init_available_pnltracker_dates,
                          today_str_date,
                          id='year-filter-dropdown'),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
         dbc.Col(
             dcc.Checklist(['Rolling Performance'],
                           ['Rolling Performance'],
                           inline=True,
                           id='rolling_performance_flag'),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
     ]),
     dbc.Row(
         [
@@ -217,38 +223,37 @@ layout = dbc.Container([
                                 min_date_allowed=earliest_date,
                                 max_date_allowed=latest_date,
                                 initial_visible_month=datetime.strptime(latest_date, "%Y%m%d") - timedelta(days=30)),
-            #html.Div(id='output-container-date-picker-range'),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
+            # html.Div(id='output-container-date-picker-range'),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=6, class_name=('mt-4')),
         dbc.Col(
 
             html.Button('Refresh', id='reset-button', n_clicks=0),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=2,class_name=('mt-4')),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=2, class_name=('mt-4')),
         dbc.Col([
             dbc.Label("Select a Contract:", style=dict(textAlign='right')),
-            dcc.Dropdown(curr_avail_pos_pnl_con_list,
-                         curr_avail_pos_pnl_con_list[0],
-                         id='pos_pnl_select_dropdown'
-            )],
-
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+            dcc.Dropdown(options=curr_avail_pos_pnl_con_list,
+                         value=curr_avail_pos_pnl_con_list[0],
+                         id='pos-pnl-select-dropdown'
+                         )],
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
     ]),
     dbc.Row([
-            dbc.Col(
-                dcc.Graph(id='output-container-date-picker-range'),
-                #dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
-                #                                   visible_list=['DailyPnL'])),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
-            dbc.Col(
-                dcc.Graph(id='ret-on-margin-figure'),
-                #dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
-                #                                   visible_list=['DailyPnL'])),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
-            dbc.Col(
-                #dcc.Graph(figure=data_viz.line_pnl(daily_pnl_timeseries_df, visible_list=['DailyPnL'])),
-                # dcc.Graph(figure=data_viz.line_pnl(daily_pnl_timeseries_df['6JU5'], visible_list=['DailyPnL'])),
-                dcc.Graph(id='contract_pnl_figure'),
-                # dcc.Graph(id='pnl_histogram'),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,className=('mt-4')),
+        dbc.Col(
+            dcc.Graph(id='output-container-date-picker-range'),
+            # dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
+            #                                   visible_list=['DailyPnL'])),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
+        dbc.Col(
+            dcc.Graph(id='ret-on-margin-figure'),
+            # dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
+            #                                   visible_list=['DailyPnL'])),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
+        dbc.Col(
+            # dcc.Graph(figure=data_viz.line_pnl(daily_pnl_timeseries_df, visible_list=['DailyPnL'])),
+            # dcc.Graph(figure=data_viz.line_pnl(daily_pnl_timeseries_df['6JU5'], visible_list=['DailyPnL'])),
+            dcc.Graph(id='contract_pnl_figure'),
+            # dcc.Graph(id='pnl_histogram'),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, className=('mt-4')),
 
     ]),
     # dbc.Row([
@@ -263,51 +268,57 @@ layout = dbc.Container([
     dbc.Row([
         # dbc.Label(list(total_position_df.keys())[0], style={'fontSize': '20px', 'textAlign': 'left'}),
         dbc.Col(dash_table.DataTable(id='total-position-table',
-            data=init_total_position_df.to_dict('records'), \
-                                     columns=[{"name": i, "id": i, "type": data_type_dict.setdefault(i, ('numeric', None))[0],
-                                       "format": data_type_dict.setdefault(i, ('numeric', None))[1]}
-                                      for i in init_total_position_df.columns],
+                                     data=init_total_position_df.to_dict('records'),
+                                     columns=[{"name": i, "id": i,
+                                               "type": data_type_dict.setdefault(i, ('numeric', None))[0],
+                                               "format": data_type_dict.setdefault(i, ('numeric', None))[1]}
+                                              for i in init_total_position_df.columns],
                                      style_data_conditional=[
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#ffcccb',
-                                         } for col in init_total_position_df.columns
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#32CD32'
-                                         } for col in init_total_position_df.columns
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'column_id': c
-                                             },
-                                             'textAlign': 'right'
-                                         } for c in ['Units', 'Expected Return', 'Risk', 'Reward', 'Hit Rate',
-                                                     'Actual Return', 'Within Risk @ Extrema?', 'Within Risk @ Settle?']
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'filter_query': '{Hit Rate} > 0.60',
-                                                 'column_id': 'Hit Rate'
-                                             },
-                                             'backgroundColor': '#32CD32'
-                                         }
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'filter_query': '{Hit Rate} < 0.60',
-                                                 'column_id': 'Hit Rate'
-                                             },
-                                             'backgroundColor': 'white'
-                                         }
-                                     ],
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#ffcccb',
+                                                                } for col in init_total_position_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#32CD32'
+                                                                } for col in init_total_position_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'column_id': c
+                                                                    },
+                                                                    'textAlign': 'right'
+                                                                } for c in
+                                                                ['Units', 'Expected Return', 'Risk', 'Reward',
+                                                                 'Hit Rate',
+                                                                 'Actual Return', 'Within Risk @ Extrema?',
+                                                                 'Within Risk @ Settle?']
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{Hit Rate} > 0.60',
+                                                                        'column_id': 'Hit Rate'
+                                                                    },
+                                                                    'backgroundColor': '#32CD32'
+                                                                }
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{Hit Rate} < 0.60',
+                                                                        'column_id': 'Hit Rate'
+                                                                    },
+                                                                    'backgroundColor': 'white'
+                                                                }
+                                                            ],
                                      style_cell={'textAlign': 'left', 'fontSize': '12px'},
                                      style_header={
                                          'backgroundColor': '#EBECF0',
@@ -318,7 +329,7 @@ layout = dbc.Container([
                                      sort_mode="multi",
                                      style_as_list_view=True)),
     ]),
-    #dbc.Row('',class_name=('mb-4')),
+    # dbc.Row('',class_name=('mb-4')),
     dbc.Row([
         dbc.Label("QFS Trade Tracker", style={'fontSize': '20px', 'textAlign': 'left'}),
         # dbc.Label("7-Day", style={'fontSize': '20px', 'textAlign': 'right'}),
@@ -326,24 +337,25 @@ layout = dbc.Container([
             dcc.Dropdown([x for x, y in init_trade_tracker_html_doc_dict.items()],
                          f'QFS_USEquity_TradeTrackerApp_{today_str_date}.html',
                          id='trade_plan_select_dropdown'
-            ),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+                         ),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
 
         dbc.Col(
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=8,class_name=('mt-4')),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=8, class_name=('mt-4')),
     ]),
     dbc.Row([
-        dbc.Col(html.Iframe(#src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
-                            # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
-                            id='trade_plan_weblink',
-                            style={"height": "750px", "width": "100%"}),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=12,class_name=('mt-4')
-                ),
-        #dbc.Col(html.Iframe(id='trade_plan_weblink',
+        dbc.Col(html.Iframe(
+            # src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
+            # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
+            id='trade_plan_weblink',
+            style={"height": "750px", "width": "100%"}),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=12, class_name=('mt-4')
+        ),
+        # dbc.Col(html.Iframe(id='trade_plan_weblink',
         #                    style={"height": "533px", "width": "100%"}),
         #        xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')
         #        ),
-        #dbc.Col(html.Iframe(src="https://docs.google.com/document/d/e/"
+        # dbc.Col(html.Iframe(src="https://docs.google.com/document/d/e/"
         #                        "2PACX-1vQarfihQRaUt6qoCRI3jXsE36NCisBSqY6p"
         #                        "VAVDYLAVkcRzt7scu9M_JWHNhpmaFHG-UWAQnW19zOfj/pub?embedded=true",
         #                    style={"height": "533px", "width": "50%"}),
@@ -402,81 +414,143 @@ layout = dbc.Container([
         #                              ]),
         #         xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4'))
     ]),
-    dbc.Row('',class_name=('mb-4')),
+    dbc.Row('', class_name=('mb-4')),
     dbc.Row([
         dbc.Label("QFS Contract Sizing & Signals", style={'fontSize': '20px', 'textAlign': 'left'}),
-        #dbc.Label("Max Allowed", style={'fontSize': '20px', 'textAlign': 'right'}),
-        #dbc.Col(
+        # dbc.Label("Max Allowed", style={'fontSize': '20px', 'textAlign': 'right'}),
+        # dbc.Col(
         #    dcc.Dropdown([x for x, y in trade_tracker_html_doc_dict.items()],
         #                 f'QFS_USEquity_TradeTrackerApp_{today_str_date}.html',
         #                 id='trade_plan_select_dropdown'
         #    ),
         #    xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
         #
-        #dbc.Col(
+        # dbc.Col(
         #    xs=12,sm=12,md=12,lg=12,xl=12,xxl=8,class_name=('mt-4')),
     ]),
     dbc.Row([
-        dbc.Col(html.Iframe(#src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
-                            # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
-                            src="https://datawrapper.dwcdn.net/U0avf/4/",
-                            #id='trade_plan_weblink',
-                            style={"height": "533px", "width": "100%"}),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')
+        dbc.Col(dash_table.DataTable(id='qfs-signals-table',
+                                     data=init_qfs_signals_df.to_dict('records'),
+                                     columns=[{"name": i, "id": i,
+                                               "type": data_type_dict.setdefault(i, ('numeric', None))[0],
+                                               "format": data_type_dict.setdefault(i, ('numeric', None))[1]}
+                                              for i in init_qfs_signals_df.columns],
+                                     style_data_conditional=[
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#ffcccb',
+                                                                } for col in init_qfs_signals_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#32CD32'
+                                                                } for col in init_qfs_signals_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'column_id': c
+                                                                    },
+                                                                    'textAlign': 'right'
+                                                                } for c in
+                                                                ['Units', 'Expected Return', 'Risk', 'Reward',
+                                                                 'Hit Rate',
+                                                                 'Actual Return', 'Within Risk @ Extrema?',
+                                                                 'Within Risk @ Settle?']
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{Hit Rate} > 0.60',
+                                                                        'column_id': 'Hit Rate'
+                                                                    },
+                                                                    'backgroundColor': '#32CD32'
+                                                                }
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{Hit Rate} < 0.60',
+                                                                        'column_id': 'Hit Rate'
+                                                                    },
+                                                                    'backgroundColor': 'white'
+                                                                }
+                                                            ],
+                                     style_cell={'textAlign': 'left', 'fontSize': '12px'},
+                                     style_header={
+                                         'backgroundColor': '#EBECF0',
+                                         'fontWeight': 'bold'
+                                     },
+                                     page_size=10,
+                                     sort_action="native",
+                                     sort_mode="multi",
+                                     style_as_list_view=True),
+                xs=12, sm=12, md=12, lg=12, xl=12, xxl=6, class_name=('mt-4')
                 ),
-        dbc.Col(html.Iframe(#src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
-                            # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
-                            src="https://datawrapper.dwcdn.net/My1Bw/3/",
-                            #id='trade_plan_weblink',
-                            style={"height": "533px", "width": "100%"}),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
+        dbc.Col(html.Iframe(
+            # src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
+            # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
+            src="https://datawrapper.dwcdn.net/My1Bw/3/",
+            # id='trade_plan_weblink',
+            style={"height": "533px", "width": "100%"}),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=6, class_name=('mt-4')),
     ]),
-    dbc.Row('',class_name=('mb-4')),
+    dbc.Row('', class_name=('mb-4')),
     dbc.Row([
         # dbc.Label("QFS Contract Sizing & Signals", style={'fontSize': '20px', 'textAlign': 'left'}),
-        #dbc.Label("Max Allowed", style={'fontSize': '20px', 'textAlign': 'right'}),
+        # dbc.Label("Max Allowed", style={'fontSize': '20px', 'textAlign': 'right'}),
         dbc.Col(
             dbc.Label("Open Orders Table", style={'fontSize': '20px', 'textAlign': 'left'}),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
 
         dbc.Col(
             dbc.Label("Daily Filled Orders", style={'fontSize': '20px', 'textAlign': 'left'}),
-            xs=12,sm=12,md=12,lg=12,xl=12,xxl=8,class_name=('mt-4')),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=8, class_name=('mt-4')),
     ]),
     dbc.Row([
         # dbc.Label("Open Orders Table", style={'fontSize': '20px', 'textAlign': 'left'}),
         dbc.Col(dash_table.DataTable(id='open-orders-table',
-            data=init_to_display_open_orders_df.to_dict('records'),
-                                     columns=[{"name": i, "id": i, "type": data_type_dict[i][0], "format": data_type_dict[i][1]
-                                       } for i in init_to_display_open_orders_df.columns],
+                                     data=init_to_display_open_orders_df.to_dict('records'),
+                                     columns=[{"name": i, "id": i, "type": data_type_dict[i][0],
+                                               "format": data_type_dict[i][1]
+                                               } for i in init_to_display_open_orders_df.columns],
                                      style_cell={'textAlign': 'left', 'fontSize': '12px'},
                                      style_data_conditional=[
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#ffcccb',
-                                         } for col in init_to_display_open_orders_df.columns
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#32CD32'
-                                         } for col in init_to_display_open_orders_df.columns
-                                     ] + [
-                                         {
-                                             'if': {'column_id': c},
-                                             'textAlign': 'right'
-                                         } for c in ['Units', 'Expected Return', 'Risk', 'Reward', 'Hit Rate']
-                                     ] + [
-                                         {
-                                             'if': {'column_id': c},
-                                             'fontWeight': 'bold'
-                                         } for c in ['DYTC Model Total', 'Long Always']
-                                     ],
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#ffcccb',
+                                                                } for col in init_to_display_open_orders_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#32CD32'
+                                                                } for col in init_to_display_open_orders_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {'column_id': c},
+                                                                    'textAlign': 'right'
+                                                                } for c in
+                                                                ['Units', 'Expected Return', 'Risk', 'Reward',
+                                                                 'Hit Rate']
+                                                            ] + [
+                                                                {
+                                                                    'if': {'column_id': c},
+                                                                    'fontWeight': 'bold'
+                                                                } for c in ['DYTC Model Total', 'Long Always']
+                                                            ],
                                      style_header={
                                          'backgroundColor': 'light grey',
                                          'fontWeight': 'bold'
@@ -484,39 +558,45 @@ layout = dbc.Container([
                                      page_size=10,
                                      sort_action="native",
                                      sort_mode="multi",
-                                     style_as_list_view=True), xs=12,sm=12,md=12,lg=12,xl=12,xxl=4,class_name=('mt-4')),
+                                     style_as_list_view=True), xs=12, sm=12, md=12, lg=12, xl=12, xxl=4,
+                class_name=('mt-4')),
         # dbc.Label("Daily Filled Orders", style={'fontSize': '20px', 'textAlign': 'left'}),
         dbc.Col(dash_table.DataTable(id='order-fills-table', data=init_to_display_fills_df.to_dict('records'),
-                                     columns=[{"name": i, "id": i, "type": data_type_dict[i][0], "format": data_type_dict[i][1]
-                                       } for i in init_to_display_fills_df.columns],
+                                     columns=[{"name": i, "id": i, "type": data_type_dict[i][0],
+                                               "format": data_type_dict[i][1]
+                                               } for i in init_to_display_fills_df.columns],
                                      style_cell={'textAlign': 'left', 'fontSize': '12px'},
                                      style_data_conditional=[
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#ffcccb',
-                                         } for col in init_to_display_fills_df.columns
-                                     ] + [
-                                         {
-                                             'if': {
-                                                 'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(col=col),
-                                                 'column_id': col
-                                             },
-                                             'backgroundColor': '#32CD32'
-                                         } for col in init_to_display_fills_df.columns
-                                     ] + [
-                                         {
-                                             'if': {'column_id': c},
-                                             'textAlign': 'right'
-                                         } for c in ['Units', 'Expected Return', 'Risk', 'Reward', 'Hit Rate']
-                                     ] + [
-                                         {
-                                             'if': {'column_id': c},
-                                             'fontWeight': 'bold'
-                                         } for c in ['DYTC Model Total', 'Long Always']
-                                     ],
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = S || {{{col}}} < 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#ffcccb',
+                                                                } for col in init_to_display_fills_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {
+                                                                        'filter_query': '{{{col}}} = L || {{{col}}} > 0.0'.format(
+                                                                            col=col),
+                                                                        'column_id': col
+                                                                    },
+                                                                    'backgroundColor': '#32CD32'
+                                                                } for col in init_to_display_fills_df.columns
+                                                            ] + [
+                                                                {
+                                                                    'if': {'column_id': c},
+                                                                    'textAlign': 'right'
+                                                                } for c in
+                                                                ['Units', 'Expected Return', 'Risk', 'Reward',
+                                                                 'Hit Rate']
+                                                            ] + [
+                                                                {
+                                                                    'if': {'column_id': c},
+                                                                    'fontWeight': 'bold'
+                                                                } for c in ['DYTC Model Total', 'Long Always']
+                                                            ],
                                      style_header={
                                          'backgroundColor': 'light grey',
                                          'fontWeight': 'bold'
@@ -524,7 +604,8 @@ layout = dbc.Container([
                                      page_size=10,
                                      sort_action="native",
                                      sort_mode="multi",
-                                     style_as_list_view=True), xs=12,sm=12,md=12,lg=12,xl=12,xxl=8,class_name=('mt-4'))
+                                     style_as_list_view=True), xs=12, sm=12, md=12, lg=12, xl=12, xxl=8,
+                class_name=('mt-4'))
     ]),
     # dbc.Row('',class_name=('mb-4')),
     # dbc.Row([
@@ -573,10 +654,10 @@ layout = dbc.Container([
 ], fluid=True, className="dbc")
 
 
-#@callback(
+# @callback(
 #    Output(component_id="pnl_histogram", component_property="figure"),
 #    Input(component_id="model_select_dropdown", component_property="value"))
-#def update_model_pnl_data(model_select_name):
+# def update_model_pnl_data(model_select_name):
 #    df_ms = None
 #    model_list_df = None
 #    return data_viz.pnl_histogram(df_ms, model_list_df, model_select_name)
@@ -592,8 +673,8 @@ def update_trade_plan_iframe(trade_plan_name):
 
 
 @callback(
-    dash.Output(component_id='contract_pnl_figure', component_property='figure'), # or children
-    dash.Input(component_id='pos_pnl_select_dropdown', component_property='value'))
+    dash.Output(component_id='contract_pnl_figure', component_property='figure'),  # or children
+    dash.Input(component_id='pos-pnl-select-dropdown', component_property='value'))
 def update_contract_pnl_graph(the_con):
     # triggered_id = ctx.triggered_id
     # if triggered_id == 'pos_pnl_select_dropdown':
@@ -612,7 +693,7 @@ def update_contract_pnl_graph(the_con):
 
 
 @callback(
-    Output(component_id='output-container-date-picker-ranges', component_property='figure'), # or children
+    Output(component_id='output-container-date-picker-ranges', component_property='figure'),  # or children
     Input(component_id='my-date-picker-range', component_property='start_date'),
     Input(component_id='my-date-picker-range', component_property='end_date'),
     Input(component_id='reset-button', component_property='n_clicks'),
@@ -652,40 +733,55 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
     Output(component_id='margin-display', component_property='value'),
     Output(component_id='ret-on-margin-display', component_property='value'),
     Output(component_id='ret-on-margin-figure', component_property='figure'),
+    Output(component_id='pos-pnl-select-dropdown', component_property='options'),
+    Output(component_id='pos-pnl-select-dropdown', component_property='value'),
+    Output(component_id='qfs-signals-table', component_property='data'),
     Input('interval-component', 'n_intervals'),
 )
 def update_data(n):
-
-    today_dt_date = datetime.now()
-    today_str_date = today_dt_date.strftime("%Y%m%d")
-    margin_req_df, margin_req_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+    local_today_dt_date = datetime.now()
+    local_today_str_date = today_dt_date.strftime("%Y%m%d")
+    margin_req_df, margin_req_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
                                                                           data_type='',
                                                                           acct_num=default_acct_num)
-    rom = margin_req_df.DailyPnL.astype(float)/margin_req_df.InitMarginReq.astype(float)*100.0
+    rom = margin_req_df.DailyPnL.astype(float) / margin_req_df.InitMarginReq.astype(float) * 100.0
     margin_req_df = margin_req_df.assign(ReturnOnInitMargin=rom)
-    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
                                                                             data_type='pnltracker_',
                                                                             acct_num=default_acct_num)
-    position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+    position_df, position_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
                                                                       acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                      data_type='avgcost_',
                                                                       acct_num=default_acct_num)
-    position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+    position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
                                                                               data_type='position_pnl_',
                                                                               acct_num=default_acct_num)
-    open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+    open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
                                                                             data_type='open_orders_',
                                                                             acct_num=default_acct_num)
     to_display_open_orders_df = open_orders_df[
         ['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy()
-    fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                dt_date=today_dt_date,
+    fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                dt_date=local_today_dt_date,
                                                                 data_type='fills_',
                                                                 acct_num=default_acct_num)
     to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
                                     'Price', 'AvgPrice', 'CumQty']].copy()
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
     total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
+    daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
+        get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
+    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique()
+
+    if time(17, 0, 0) < local_today_dt_date.time() < time(23, 59, 0):
+        qfs_signals_df = get_data.get_any_data_type_df(data_type='QFS_DailySignals_',
+                                                       acct_num=default_acct_num,
+                                                       str_date=local_today_str_date,
+                                                       dt_date=local_today_dt_date + timedelta(days=1))
+    else:
+        qfs_signals_df = init_qfs_signals_df
+
     amount = pnl_tracker_df['DailyPnL'].iloc[-1]
     formatted_amt = f"{amount:.2f}"
     margin_amt = margin_req_df['InitMarginReq'].iloc[-1]
@@ -695,26 +791,26 @@ def update_data(n):
     return (formatted_amt, data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL']),
             total_position_df.to_dict('records'), to_display_open_orders_df.to_dict('records'),
             to_display_fills_df.to_dict('records'), formatted_margin_amt, formatted_rom,
-            data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'))
+            data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'),
+            local_curr_avail_pos_pnl_con_list, local_curr_avail_pos_pnl_con_list[0], qfs_signals_df)
 
 
 @callback(Output('intermediate-value', 'data'),
-          Input('refresh-button','n_clicks'))
+          Input('refresh-button', 'n_clicks'))
 def clean_data(n_clicks):
+    local_today_dt_date = datetime.now()
+    local_today_str_date = today_dt_date.strftime("%Y%m%d")
 
-    today_dt_date = datetime.now()
-    today_str_date = today_dt_date.strftime("%Y%m%d")
-
-    fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                dt_date=today_dt_date,
-                                                                data_type='fills_',
-                                                                acct_num=default_acct_num)
-    to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
-                                    'Price', 'AvgPrice', 'CumQty']].copy()
-    open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='open_orders_',
-                                                                            acct_num=default_acct_num)
-    to_display_open_orders_df = open_orders_df[
+    local_fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                      dt_date=today_dt_date,
+                                                                      data_type='fills_',
+                                                                      acct_num=default_acct_num)
+    local_to_display_fills_df = local_fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange',
+                                                'Side', 'NumContracts', 'Price', 'AvgPrice', 'CumQty']].copy()
+    local_open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                                  data_type='open_orders_',
+                                                                                  acct_num=default_acct_num)
+    to_display_open_orders_df = local_open_orders_df[
         ['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy()
     position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                               data_type='position_pnl',
@@ -728,21 +824,20 @@ def clean_data(n_clicks):
                                                                             acct_num=default_acct_num)
     daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
         get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
-    curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique()
+    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique()
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
     total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
     available_position_dates = get_data.get_file_type_dates(data_type='positions_', acct_num=default_acct_num)
     available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker_', acct_num=default_acct_num)
     trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
     # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
-    tthdd_keys, tthdd_values = zip(*trade_tracker_html_doc_dict.items())
+    local_tthdd_keys, local_tthdd_values = zip(*trade_tracker_html_doc_dict.items())
     trade_tracker_html_doc_dict = \
-        dict(zip(tthdd_keys[len(trade_tracker_categories) * -1:], tthdd_values[len(trade_tracker_categories) * -1:]))
-    earliest_date = available_position_dates[0]
-    latest_date = available_position_dates[-1]
+        dict(zip(local_tthdd_keys[len(trade_tracker_categories) * -1:],
+                 local_tthdd_values[len(trade_tracker_categories) * -1:]))
 
     the_store_data = {
-        'to_display_fills_df': to_display_fills_df.to_json(orient='split', date_format='iso'),
+        'to_display_fills_df': local_to_display_fills_df.to_json(orient='split', date_format='iso'),
         'to_display_open_orders_df': to_display_open_orders_df.to_json(orient='split', date_format='iso'),
         'position_pnl_df': position_pnl_df.to_json(orient='split', date_format='iso'),
         'position_df': position_df.to_json(orient='split', date_format='iso'),
