@@ -442,6 +442,21 @@ def bar_plot_rate_vol_binning(df_dict, display_func=None, rate_vol_name='Rate Vo
     return fig
 
 
+def create_generic_bar_plot(df, title):
+
+    fig = px.bar(df,
+                 x='Contract',
+                 y='Max Trade Size',
+                 hover_data=['Max Trade Size', 'Max Slip (% or Ticks)', 'Con Exp', 'Trade Date'],
+                 color='Max Trade Size',
+                 # labels={aggregation_value: aggregation_value + ', ES Pts', 'bins': rate_vol_name},
+                 text='Max Trade Size', color_continuous_scale='rainbow',
+                 title=title)
+    return fig
+
+
+
+
 def bar_plot_accuracy_stats(bar_plot_df):
     fig = px.bar(bar_plot_df,
                  x=bar_plot_df.index,

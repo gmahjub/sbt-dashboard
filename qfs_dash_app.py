@@ -59,7 +59,7 @@ title = html.H1(children="QFS Dashboard",
                 style={'fontSize': 36})
 
 app.layout = html.Div(style={'backgroundColor': colors['background-color']}, children=[
-    dcc.Interval(id='interval-component', interval=60*1000, n_intervals=0),
+    dcc.Interval(id='interval-component', interval=300*1000, n_intervals=0),
     dcc.Store(id='intermediate-value'),
     dbc.Row(title),
     dbc.Row([html.Div(id='button',
@@ -90,4 +90,4 @@ if __name__ == '__main__':
     server = app.server
     # setting this to debug = False as we are loading to GCP
     # app.run_server(debug=True)
-    app.run(debug=False, host="0.0.0.0", port=8050, dev_tools_hot_reload=False)
+    app.run(debug=True, host="0.0.0.0", port=8050, dev_tools_hot_reload=False)

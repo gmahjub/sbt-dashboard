@@ -89,6 +89,7 @@ if init_fills_df is None and init_fills_update_time is None:
 init_to_display_fills_df = init_fills_df[
     ['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
      'Price', 'AvgPrice', 'CumQty']].copy()
+init_to_display_fills_df.sort_values('Time', ascending=False, inplace=True)
 init_open_orders_df, init_open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
                                                                                   data_type='open_orders_',
                                                                                   acct_num=default_acct_num)
@@ -107,7 +108,7 @@ init_pnl_tracker_df, init_pnl_tracker_update_time = (
     get_data.get_any_data_type_df(str_date=today_str_date, data_type='pnltracker_', acct_num=default_acct_num))
 init_daily_pnl_timeseries_df, init_unrealized_pnl_timeseries_df, init_position_pnl_df = (
     get_data.create_daily_timeseries(init_position_df, init_avg_cost_df, init_position_pnl_df, transposed=False))
-curr_avail_pos_pnl_con_list = init_daily_pnl_timeseries_df.columns.get_level_values(0).unique()
+curr_avail_pos_pnl_con_list = init_daily_pnl_timeseries_df.columns.get_level_values(0).unique().tolist()
 init_total_position_df = get_data.create_total_position_df(init_position_df, init_avg_cost_df,
                                                            init_position_pnl_df, transposed=False)
 init_total_position_df = init_total_position_df.reset_index().rename(columns={'index': 'Contract'})
@@ -119,6 +120,7 @@ init_qfs_signals_df, init_qfs_signals_update_time = (
                                   acct_num=default_acct_num,
                                   str_date=today_str_date,
                                   dt_date=today_dt_date + timedelta(days=1)))
+
 # # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
 tthdd_keys, tthdd_values = zip(*init_trade_tracker_html_doc_dict.items())
 init_trade_tracker_html_doc_dict =\
@@ -134,6 +136,7 @@ latest_date = init_available_position_dates[-1]
 # the_trade_plans = get_data.get_trade_plans()
 final_signal_nc_str = "name contains 'Final Signal' and name contains 'SB Trades'"
 prelim_signal_nc_str = "name contains 'Prelim Signal' and name contains 'SB Trades'"
+max_size_bar_plot_title = 'QFS Position Sizing'
 # the_final_signals = get_data.get_trade_plans(name_contains=final_signal_nc_str)
 # the_prelim_signals = get_data.get_trade_plans(name_contains=prelim_signal_nc_str)
 # signal_integrity_df = get_data.create_integrity_df(df_ms, the_trade_plans, the_final_signals, the_prelim_signals)
@@ -351,6 +354,7 @@ layout = dbc.Container([
             style={"height": "750px", "width": "100%"}),
             xs=12, sm=12, md=12, lg=12, xl=12, xxl=12, class_name=('mt-4')
         ),
+
         # dbc.Col(html.Iframe(id='trade_plan_weblink',
         #                    style={"height": "533px", "width": "100%"}),
         #        xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')
@@ -492,12 +496,19 @@ layout = dbc.Container([
                                      style_as_list_view=True),
                 xs=12, sm=12, md=12, lg=12, xl=12, xxl=6, class_name=('mt-4')
                 ),
-        dbc.Col(html.Iframe(#src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
-                            # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
-                            src="https://datawrapper.dwcdn.net/My1Bw/4/",
-                            #id='trade_plan_weblink',
-                            style={"height": "533px", "width": "100%"}),
-                xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
+        dbc.Col(
+            dcc.Graph(id='sizing-bar-plot'),
+            # dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
+            #                                   visible_list=['DailyPnL'])),
+            xs=12, sm=12, md=12, lg=12, xl=12, xxl=6, class_name=('mt-4')
+        ),
+
+        #dbc.Col(html.Iframe(#src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
+        #                    # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
+        #                    src="https://datawrapper.dwcdn.net/My1Bw/4/",
+        #                    #id='trade_plan_weblink',
+        #                    style={"height": "533px", "width": "100%"}),
+        #        xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
 
     ]),
     dbc.Row('', class_name=('mb-4')),
@@ -742,6 +753,7 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
     Output(component_id='pos-pnl-select-dropdown', component_property='options'),
     Output(component_id='pos-pnl-select-dropdown', component_property='value'),
     Output(component_id='qfs-signals-table', component_property='data'),
+    Output(component_id='sizing-bar-plot', component_property='figure'),
     Input('interval-component', 'n_intervals'),
 )
 def update_data(n):
@@ -781,11 +793,12 @@ def update_data(n):
                                                                 acct_num=default_acct_num)
     to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
                                     'Price', 'AvgPrice', 'CumQty']].copy()
+    to_display_fills_df.sort_values('Time', ascending=False, inplace=True)
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
     total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
     daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
         get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
-    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique()
+    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique().tolist()
 
     if time(17, 0, 0) < local_today_dt_date.time() < time(23, 59, 0):
         qfs_signals_df = get_data.get_any_data_type_df(data_type='QFS_DailySignals_',
@@ -805,7 +818,8 @@ def update_data(n):
             total_position_df.to_dict('records'), to_display_open_orders_df.to_dict('records'),
             to_display_fills_df.to_dict('records'), formatted_margin_amt, formatted_rom,
             data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'),
-            local_curr_avail_pos_pnl_con_list, local_curr_avail_pos_pnl_con_list[0], qfs_signals_df)
+            local_curr_avail_pos_pnl_con_list, local_curr_avail_pos_pnl_con_list[0], qfs_signals_df.to_dict('records'),
+            data_viz.create_generic_bar_plot(qfs_signals_df, title=max_size_bar_plot_title))
 
 
 @callback(Output('intermediate-value', 'data'),
@@ -820,6 +834,7 @@ def clean_data(n_clicks):
                                                                       acct_num=default_acct_num)
     local_to_display_fills_df = local_fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange',
                                                 'Side', 'NumContracts', 'Price', 'AvgPrice', 'CumQty']].copy()
+    local_to_display_fills_df.sort_values('Time', ascending=False, inplace=True)
     local_open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
                                                                                   data_type='open_orders_',
                                                                                   acct_num=default_acct_num)
@@ -837,7 +852,7 @@ def clean_data(n_clicks):
                                                                             acct_num=default_acct_num)
     daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
         get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
-    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique()
+    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique().tolist()
     total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
     total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
     available_position_dates = get_data.get_file_type_dates(data_type='positions_', acct_num=default_acct_num)

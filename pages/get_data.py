@@ -24,6 +24,9 @@ S3_BUCKET_NAME = "sbt-public-share"
 s3_client = boto3.client('s3')
 paginator = s3_client.get_paginator('list_objects_v2')
 
+cols_for_data_type_dict = {'QFS_DailySignals_': ['Contract', 'Action', 'Priority', 'Max Slip (% or Ticks)', 'Con Exp',
+                                                 'Trade Date', 'Max Trade Size', 'CME Con Code']}
+
 
 def generate_s3_presigned_url(object_key, expiration_seconds=604800):
     """
@@ -186,6 +189,8 @@ def get_any_data_type_df(str_date, dt_date=None, data_type='positions_', acct_nu
     csv_file = io.StringIO(object_csv)
     position_date_df = pd.read_csv(csv_file)
     last_modified_time_local = object_s3['LastModified'].astimezone(pytz.timezone('America/Chicago'))
+    if data_type in cols_for_data_type_dict:
+        position_date_df = position_date_df[cols_for_data_type_dict[data_type]]
     return position_date_df, last_modified_time_local.strftime("%Y%m%d %H:%m:%S")
 
 
