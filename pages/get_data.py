@@ -165,7 +165,10 @@ def get_any_data_type_df(str_date, dt_date=None, data_type='positions_', acct_nu
 
     if acct_num is None:
         acct_num = os.getenv('DEFAULT_BROKER_ACCT_NUM')
-    total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
+    if data_type == 'QFS_DailySignals_':
+        total_pos_fn = f'{data_type}{str_date}.csv'
+    else:
+        total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
 
     object_s3 = None
     while object_s3 is None:
