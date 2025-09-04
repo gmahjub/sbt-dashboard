@@ -10,6 +10,9 @@ from dash_bootstrap_templates import load_figure_template
 from flask import Flask
 from flask_restful import Resource, Api
 
+colors = {
+    'background-color': '#F5F5F5'
+}
 
 class HealthCheck(Resource):
     def get(self):
@@ -55,8 +58,8 @@ title = html.H1(children="QFS Dashboard",
                 className='text-center mt-4',
                 style={'fontSize': 36})
 
-app.layout = html.Div(children=[
-    dcc.Interval(id='interval-component', interval=30*1000, n_intervals=0),
+app.layout = html.Div(style={'backgroundColor': colors['background-color']}, children=[
+    dcc.Interval(id='interval-component', interval=60*1000, n_intervals=0),
     dcc.Store(id='intermediate-value'),
     dbc.Row(title),
     dbc.Row([html.Div(id='button',
@@ -87,4 +90,4 @@ if __name__ == '__main__':
     server = app.server
     # setting this to debug = False as we are loading to GCP
     # app.run_server(debug=True)
-    app.run(debug=True, host="0.0.0.0", port=8050)
+    app.run(debug=False, host="0.0.0.0", port=8050, dev_tools_hot_reload=False)

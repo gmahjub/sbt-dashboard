@@ -426,7 +426,7 @@ layout = dbc.Container([
                 ),
         dbc.Col(html.Iframe(#src="https://sbt-public-share.s3.amazonaws.com/QFS_Energy_TradeTrackerApp_20250813.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQQABDV7WCMEZDXMK%2F20250826%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250826T173436Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=3f190e19596d19d2e03b83d4b195d08783426f6672674111cf51e35e0db68951&Content-Type=text/html",
                             # src="https://sbt-public-share.s3.us-east-2.amazonaws.com/QFS_USEquity_TradeTrackerApp_20250826.html",
-                            src="https://datawrapper.dwcdn.net/My1Bw/3/",
+                            src="https://datawrapper.dwcdn.net/My1Bw/4/",
                             #id='trade_plan_weblink',
                             style={"height": "533px", "width": "100%"}),
                 xs=12,sm=12,md=12,lg=12,xl=12,xxl=6,class_name=('mt-4')),
@@ -595,15 +595,21 @@ def update_trade_plan_iframe(trade_plan_name):
     dash.Output(component_id='contract_pnl_figure', component_property='figure'), # or children
     dash.Input(component_id='pos_pnl_select_dropdown', component_property='value'))
 def update_contract_pnl_graph(the_con):
+    today_dt_date = datetime.now()
+    today_str_date = today_dt_date.strftime("%Y%m%d")
     # triggered_id = ctx.triggered_id
     # if triggered_id == 'pos_pnl_select_dropdown':
     # return data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL'])
     position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                              dt_date=today_dt_date,
                                                                               data_type='position_pnl_',
                                                                               acct_num=default_acct_num)
     position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                      dt_date=today_dt_date,
                                                                       acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                      dt_date=today_dt_date,
+                                                                      data_type='avgcost_',
                                                                       acct_num=default_acct_num)
     daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
         get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
@@ -659,21 +665,28 @@ def update_data(n):
     today_dt_date = datetime.now()
     today_str_date = today_dt_date.strftime("%Y%m%d")
     margin_req_df, margin_req_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                          dt_date=today_dt_date,
                                                                           data_type='',
                                                                           acct_num=default_acct_num)
     rom = margin_req_df.DailyPnL.astype(float)/margin_req_df.InitMarginReq.astype(float)*100.0
     margin_req_df = margin_req_df.assign(ReturnOnInitMargin=rom)
     pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                            dt_date=today_dt_date,
                                                                             data_type='pnltracker_',
                                                                             acct_num=default_acct_num)
     position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                      dt_date=today_dt_date,
                                                                       acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                      dt_date=today_dt_date,
+                                                                      data_type='avgcost_',
                                                                       acct_num=default_acct_num)
     position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                              dt_date=today_dt_date,
                                                                               data_type='position_pnl_',
                                                                               acct_num=default_acct_num)
     open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
+                                                                            dt_date=today_dt_date,
                                                                             data_type='open_orders_',
                                                                             acct_num=default_acct_num)
     to_display_open_orders_df = open_orders_df[

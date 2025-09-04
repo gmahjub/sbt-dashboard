@@ -647,6 +647,7 @@ def line_pnl(df, visible_list, start_date=None, end_date=None,
     if start_date is None and end_date is None:
         filtered_data = data.copy(deep=True)
     filtered_data.set_index('WriteTime', inplace=True)
+    filtered_data = filtered_data.iloc[-550:,:]
     fig = px.line(filtered_data,
                   y=filtered_data.columns,
                   x=filtered_data.index,
