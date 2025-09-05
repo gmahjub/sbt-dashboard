@@ -337,8 +337,8 @@ layout = dbc.Container([
         dbc.Label("QFS Trade Tracker", style={'fontSize': '20px', 'textAlign': 'left'}),
         # dbc.Label("7-Day", style={'fontSize': '20px', 'textAlign': 'right'}),
         dbc.Col(
-            dcc.Dropdown([x for x, y in init_trade_tracker_html_doc_dict.items()],
-                         f'QFS_USEquity_TradeTrackerApp_{today_str_date}.html',
+            dcc.Dropdown(options=[x for x, y in init_trade_tracker_html_doc_dict.items()],
+                         value=f'QFS_USEquity_TradeTrackerApp_{today_str_date}.html',
                          id='trade_plan_select_dropdown'
                          ),
             xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
@@ -754,6 +754,8 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
     Output(component_id='pos-pnl-select-dropdown', component_property='value'),
     Output(component_id='qfs-signals-table', component_property='data'),
     Output(component_id='sizing-bar-plot', component_property='figure'),
+    Output(component_id='trade_plan_select_dropdown', component_property='options'),
+    Output(component_id='trade_plan_select_dropdown', component_property='value'),
     Input('interval-component', 'n_intervals'),
 )
 def update_data(n):
@@ -807,7 +809,13 @@ def update_data(n):
                                                        dt_date=local_today_dt_date + timedelta(days=1))
     else:
         qfs_signals_df = init_qfs_signals_df
-
+    local_trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
+    # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
+    local_tthdd_keys, local_tthdd_values = zip(*local_trade_tracker_html_doc_dict.items())
+    local_trade_tracker_html_doc_dict = \
+        dict(zip(local_tthdd_keys[len(trade_tracker_categories) * -1:],
+                 local_tthdd_values[len(trade_tracker_categories) * -1:]))
+    options_list_tthd = [x for x, y in local_trade_tracker_html_doc_dict.items()]
     amount = pnl_tracker_df['DailyPnL'].iloc[-1]
     formatted_amt = f"{amount:.2f}"
     margin_amt = margin_req_df['InitMarginReq'].iloc[-1]
@@ -819,7 +827,8 @@ def update_data(n):
             to_display_fills_df.to_dict('records'), formatted_margin_amt, formatted_rom,
             data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'),
             local_curr_avail_pos_pnl_con_list, local_curr_avail_pos_pnl_con_list[0], qfs_signals_df.to_dict('records'),
-            data_viz.create_generic_bar_plot(qfs_signals_df, title=max_size_bar_plot_title))
+            data_viz.create_generic_bar_plot(qfs_signals_df, title=max_size_bar_plot_title),
+            options_list_tthd, options_list_tthd[0])
 
 
 @callback(Output('intermediate-value', 'data'),
