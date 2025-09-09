@@ -169,6 +169,7 @@ def get_any_data_type_df(str_date, dt_date=None, data_type='positions_', acct_nu
     if acct_num is None:
         acct_num = os.getenv('DEFAULT_BROKER_ACCT_NUM')
     if data_type == 'QFS_DailySignals_':
+        str_date = dt_date.strftime("%Y%m%d")
         total_pos_fn = f'{data_type}{str_date}.csv'
     else:
         total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
@@ -183,7 +184,10 @@ def get_any_data_type_df(str_date, dt_date=None, data_type='positions_', acct_nu
                 # the file does not exist in the bucket
                 dt_date = (dt_date - timedelta(days=1))
                 str_date = dt_date.strftime("%Y%m%d")
-                total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
+                if data_type == 'QFS_DailySignals_':
+                    total_pos_fn = f'{data_type}{str_date}.csv'
+                else:
+                    total_pos_fn = f'{acct_num}_{data_type}{str_date}.csv'
 
     object_csv = object_s3['Body'].read().decode('utf-8')
     csv_file = io.StringIO(object_csv)

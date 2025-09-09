@@ -683,7 +683,7 @@ def line_pnl(df, visible_list, start_date=None, end_date=None,
     fig.update_yaxes(tickformat='.2f')
     fig.update_xaxes(
         rangebreaks=[
-            dict(bounds=["sat", "mon"]),  # hide weekends
+            dict(bounds=["sat", "sun"]),  # hide weekends
         ]
     )
     return fig

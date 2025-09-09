@@ -9,6 +9,8 @@ from dash import dcc
 from dash_bootstrap_templates import load_figure_template
 from flask import Flask
 from flask_restful import Resource, Api
+#from dash_extensions.logging import DivLogHandler
+#from dash_extensions.enrich import html
 
 colors = {
     'background-color': '#F5F5F5'
@@ -18,6 +20,8 @@ class HealthCheck(Resource):
     def get(self):
         return {'up': 'OK'}
 
+#log_handler = DivLogHandler()
+#logger = log_handler.setup_logger(__name__)
 
 server = Flask('qfs_dash')
 app = Dash(server=server)
@@ -66,7 +70,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background-color']}, chi
                       children=[dbc.Button(page['name'], href=page['path'])
                                 for page in dash.page_registry.values() if page['name'] != 'Equities'
                                 # for page in dash.page_registry.values() if page['name'] not in skip_pages
-                                ],
+                                ],# + [html.Div(id="div_log_txt"), log_handler.embed()],
                       className='text-center mt-4 mb-4', style={'fontSize': 20})
              ]),
     # Content page

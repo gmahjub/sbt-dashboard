@@ -13,6 +13,7 @@ from pages import get_data
 from pages import data_viz
 from datetime import date, timedelta, datetime, time
 import pandas as pd
+# from qfs_dash_app import logger, log_txt
 
 default_acct_num = os.getenv("DEFAULT_BROKER_ACCT_NUM")
 if default_acct_num is None:
@@ -150,7 +151,7 @@ rates_update_time = init_position_update_time
 ####################################
 # Page layout
 ####################################
-as_of = html.Em(children=f'Data as of {rates_update_time}',
+as_of = html.Em(children=f'Data as of {rates_update_time}', id='dash_data_update_time',
                 className=('text-center'))
 
 led_display = daq.LEDDisplay(
@@ -230,7 +231,7 @@ layout = dbc.Container([
             xs=12, sm=12, md=12, lg=12, xl=12, xxl=6, class_name=('mt-4')),
         dbc.Col(
 
-            html.Button('Refresh', id='reset-button', n_clicks=0),
+            html.Button('Refresh', id='refresh-button', n_clicks=0),
             xs=12, sm=12, md=12, lg=12, xl=12, xxl=2, class_name=('mt-4')),
         dbc.Col([
             dbc.Label("Select a Contract:", style=dict(textAlign='right')),
@@ -243,8 +244,8 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col(
             dcc.Graph(id='output-container-date-picker-range'),
-            # dcc.Graph(figure=data_viz.line_pnl(pnl_tracker_df,
-            #                                   visible_list=['DailyPnL'])),
+            #dcc.Graph(figure=data_viz.line_pnl(init_pnl_tracker_df,
+            #                                  visible_list=['DailyPnL'])),
             xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
         dbc.Col(
             dcc.Graph(id='ret-on-margin-figure'),
@@ -261,11 +262,22 @@ layout = dbc.Container([
     ]),
     # dbc.Row([
     #     dbc.Col(
-    #         dcc.Graph(figure=data_viz.bar_plot_accuracy_stats(accuracy_df)),
-    #         xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
+    #         dcc.Graph(id='output-container-date-picker-range'),
+    #         #dcc.Graph(figure=data_viz.line_pnl(init_pnl_tracker_df,
+    #         #                                   visible_list=['DailyPnL'])),
+    #         xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
     #     dbc.Col(
-    #         dcc.Graph(figure=data_viz.performance_tree(accuracy_df)),
-    #         xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
+    #         dcc.Graph(id='output-container-date-picker-range'),
+    #         #dcc.Graph(figure=data_viz.line_pnl(init_pnl_tracker_df,
+    #         #                                   visible_list=['DailyPnL'])),
+    #         xs=12, sm=12, md=12, lg=12, xl=12, xxl=4, class_name=('mt-4')),
+    #
+    #     #dbc.Col(
+    #     #     dcc.Graph(figure=data_viz.bar_plot_accuracy_stats(accuracy_df)),
+    #     #     xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
+    #     # dbc.Col(
+    #     #     dcc.Graph(figure=data_viz.performance_tree(accuracy_df)),
+    #     #     xs=12,sm=12,md=12,lg=12,xl=6,xxl=6,class_name=('mt-4')),
     # ]),
 
     dbc.Row([
@@ -709,36 +721,36 @@ def update_contract_pnl_graph(the_con):
     return a_fig
 
 
-@callback(
-    Output(component_id='output-container-date-picker-ranges', component_property='figure'),  # or children
-    Input(component_id='my-date-picker-range', component_property='start_date'),
-    Input(component_id='my-date-picker-range', component_property='end_date'),
-    Input(component_id='reset-button', component_property='n_clicks'),
-    Input(component_id='year-filter-dropdown', component_property='value'),
-    Input(component_id='rolling_performance_flag', component_property='value'),
-)
-def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolling_perf_flag):
-    triggered_id = ctx.triggered_id
-    if triggered_id is None:
-        return
-    if triggered_id == 'reset-button':
-        start_date = str(earliest_date)
-        end_date = str(latest_date)
-    if start_date is not None:
-        start_date_object = date.fromisoformat(start_date)
-    else:
-        start_date_object = None
-    if end_date is not None:
-        end_date_object = date.fromisoformat(end_date)
-    else:
-        end_date_object = None
-    # data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL'])
-    return data_viz.line_pnl(list(init_total_position_df.values())[1],
-                             visible_list=['DYTC Model Total', 'Long Always'],
-                             start_date=start_date_object,
-                             end_date=end_date_object,
-                             year_filter=year_filter,
-                             rolling_perf_flag=rolling_perf_flag)
+# @callback(
+#     Output(component_id='output-container-date-picker-ranges', component_property='figure'),  # or children
+#     Input(component_id='my-date-picker-range', component_property='start_date'),
+#     Input(component_id='my-date-picker-range', component_property='end_date'),
+#     Input(component_id='reset-button', component_property='n_clicks'),
+#     Input(component_id='year-filter-dropdown', component_property='value'),
+#     Input(component_id='rolling_performance_flag', component_property='value'),
+# )
+# def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolling_perf_flag):
+#     triggered_id = ctx.triggered_id
+#     if triggered_id is None:
+#         return
+#     if triggered_id == 'reset-button':
+#         start_date = str(earliest_date)
+#         end_date = str(latest_date)
+#     if start_date is not None:
+#         start_date_object = date.fromisoformat(start_date)
+#     else:
+#         start_date_object = None
+#     if end_date is not None:
+#         end_date_object = date.fromisoformat(end_date)
+#     else:
+#         end_date_object = None
+#     # data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL'])
+#     return data_viz.line_pnl(list(init_total_position_df.values())[1],
+#                              visible_list=['DYTC Model Total', 'Long Always'],
+#                              start_date=start_date_object,
+#                              end_date=end_date_object,
+#                              year_filter=year_filter,
+#                              rolling_perf_flag=rolling_perf_flag)
 
 
 @callback(
@@ -756,10 +768,89 @@ def update_pnl_line_graph(start_date, end_date, reset_button, year_filter, rolli
     Output(component_id='sizing-bar-plot', component_property='figure'),
     Output(component_id='trade_plan_select_dropdown', component_property='options'),
     Output(component_id='trade_plan_select_dropdown', component_property='value'),
+    Output(component_id='dash_data_update_time', component_property='children'),
     Input('interval-component', 'n_intervals'),
 )
 def update_data(n):
 
+    local_today_dt_date = datetime.now()
+    local_today_str_date = local_today_dt_date.strftime("%Y%m%d")
+    local_update_time_str = local_today_dt_date.strftime("%Y%m%d %H:%M:%S")
+    # logger.info("dashboard data last update time %s: ", local_update_time_str)
+    margin_req_df, margin_req_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                          dt_date=local_today_dt_date,
+                                                                          data_type='',
+                                                                          acct_num=default_acct_num)
+    rom = margin_req_df.DailyPnL.astype(float) / margin_req_df.InitMarginReq.astype(float) * 100.0
+    margin_req_df = margin_req_df.assign(ReturnOnInitMargin=rom)
+    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                            dt_date=local_today_dt_date,
+                                                                            data_type='pnltracker_',
+                                                                            acct_num=default_acct_num)
+    position_df, position_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                      dt_date=local_today_dt_date,
+                                                                      acct_num=default_acct_num)
+    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                      dt_date=local_today_dt_date,
+                                                                      data_type='avgcost_',
+                                                                      acct_num=default_acct_num)
+    position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                              dt_date=local_today_dt_date,
+                                                                              data_type='position_pnl_',
+                                                                              acct_num=default_acct_num)
+    open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                            dt_date=local_today_dt_date,
+                                                                            data_type='open_orders_',
+                                                                            acct_num=default_acct_num)
+    to_display_open_orders_df = open_orders_df[
+        ['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy()
+    fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
+                                                                dt_date=local_today_dt_date,
+                                                                data_type='fills_',
+                                                                acct_num=default_acct_num)
+    to_display_fills_df = fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange', 'Side', 'NumContracts',
+                                    'Price', 'AvgPrice', 'CumQty']].copy()
+    to_display_fills_df.sort_values('Time', ascending=False, inplace=True)
+    total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
+    total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
+    daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
+        get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
+    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique().tolist()
+
+    if time(17, 0, 0) < local_today_dt_date.time() < time(23, 59, 0):
+        qfs_signals_df, init_qfs_signals_update_time = (
+            get_data.get_any_data_type_df(data_type='QFS_DailySignals_',
+                                          acct_num=default_acct_num,
+                                          str_date=local_today_str_date,
+                                          dt_date=local_today_dt_date + timedelta(days=1)))
+    else:
+        qfs_signals_df = init_qfs_signals_df
+    local_trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
+    # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
+    local_tthdd_keys, local_tthdd_values = zip(*local_trade_tracker_html_doc_dict.items())
+    local_trade_tracker_html_doc_dict = \
+        dict(zip(local_tthdd_keys[len(trade_tracker_categories) * -1:],
+                 local_tthdd_values[len(trade_tracker_categories) * -1:]))
+    options_list_tthd = [x for x, y in local_trade_tracker_html_doc_dict.items()]
+    amount = pnl_tracker_df['DailyPnL'].iloc[-1]
+    formatted_amt = f"{amount:.2f}"
+    margin_amt = margin_req_df['InitMarginReq'].iloc[-1]
+    ret_on_margin = float(amount) / float(margin_amt) * 100.0
+    formatted_rom = f"{ret_on_margin:.2f}"
+    formatted_margin_amt = f"{margin_amt:.2f}"
+    return (formatted_amt, data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL']),
+            total_position_df.to_dict('records'), to_display_open_orders_df.to_dict('records'),
+            to_display_fills_df.to_dict('records'), formatted_margin_amt, formatted_rom,
+            data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'),
+            local_curr_avail_pos_pnl_con_list, local_curr_avail_pos_pnl_con_list[0], qfs_signals_df.to_dict('records'),
+            data_viz.create_generic_bar_plot(qfs_signals_df, title=max_size_bar_plot_title),
+            options_list_tthd, options_list_tthd[0],
+            f"Dashboard Data Current As-of : {pnl_tracker_df.iloc[-1].WriteTime}")
+
+
+@callback(Output('intermediate-value', 'data'),
+          Input('refresh-button', 'n_clicks'))
+def clean_data(n_clicks):
     local_today_dt_date = datetime.now()
     local_today_str_date = today_dt_date.strftime("%Y%m%d")
     margin_req_df, margin_req_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
@@ -803,10 +894,11 @@ def update_data(n):
     local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique().tolist()
 
     if time(17, 0, 0) < local_today_dt_date.time() < time(23, 59, 0):
-        qfs_signals_df = get_data.get_any_data_type_df(data_type='QFS_DailySignals_',
-                                                       acct_num=default_acct_num,
-                                                       str_date=local_today_str_date,
-                                                       dt_date=local_today_dt_date + timedelta(days=1))
+        qfs_signals_df, init_qfs_signals_update_time = (
+            get_data.get_any_data_type_df(data_type='QFS_DailySignals_',
+                                          acct_num=default_acct_num,
+                                          str_date=local_today_str_date,
+                                          dt_date=local_today_dt_date + timedelta(days=1)))
     else:
         qfs_signals_df = init_qfs_signals_df
     local_trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
@@ -815,66 +907,9 @@ def update_data(n):
     local_trade_tracker_html_doc_dict = \
         dict(zip(local_tthdd_keys[len(trade_tracker_categories) * -1:],
                  local_tthdd_values[len(trade_tracker_categories) * -1:]))
-    options_list_tthd = [x for x, y in local_trade_tracker_html_doc_dict.items()]
-    amount = pnl_tracker_df['DailyPnL'].iloc[-1]
-    formatted_amt = f"{amount:.2f}"
-    margin_amt = margin_req_df['InitMarginReq'].iloc[-1]
-    ret_on_margin = float(amount) / float(margin_amt) * 100.0
-    formatted_rom = f"{ret_on_margin:.2f}"
-    formatted_margin_amt = f"{margin_amt:.2f}"
-    return (formatted_amt, data_viz.line_pnl(pnl_tracker_df, visible_list=['DailyPnL']),
-            total_position_df.to_dict('records'), to_display_open_orders_df.to_dict('records'),
-            to_display_fills_df.to_dict('records'), formatted_margin_amt, formatted_rom,
-            data_viz.line_pnl(margin_req_df, visible_list=['ReturnOnInitMargin'], title='Return on Margin Tracker'),
-            local_curr_avail_pos_pnl_con_list, local_curr_avail_pos_pnl_con_list[0], qfs_signals_df.to_dict('records'),
-            data_viz.create_generic_bar_plot(qfs_signals_df, title=max_size_bar_plot_title),
-            options_list_tthd, options_list_tthd[0])
-
-
-@callback(Output('intermediate-value', 'data'),
-          Input('refresh-button', 'n_clicks'))
-def clean_data(n_clicks):
-    local_today_dt_date = datetime.now()
-    local_today_str_date = today_dt_date.strftime("%Y%m%d")
-
-    local_fills_df, fills_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
-                                                                      dt_date=local_today_dt_date,
-                                                                      data_type='fills_',
-                                                                      acct_num=default_acct_num)
-    local_to_display_fills_df = local_fills_df[['Symbol', 'ExpirationMonth', 'Time', 'ExecId', 'Exchange',
-                                                'Side', 'NumContracts', 'Price', 'AvgPrice', 'CumQty']].copy()
-    local_to_display_fills_df.sort_values('Time', ascending=False, inplace=True)
-    local_open_orders_df, open_orders_update_time = get_data.get_any_data_type_df(str_date=local_today_str_date,
-                                                                                  data_type='open_orders_',
-                                                                                  acct_num=default_acct_num)
-    to_display_open_orders_df = local_open_orders_df[
-        ['ConSym', 'OrderType', 'OrderAction', 'OrderQuantity', 'OrderStatus']].copy()
-    position_pnl_df, position_pnl_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                              data_type='position_pnl',
-                                                                              acct_num=default_acct_num)
-    position_df, position_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                      acct_num=default_acct_num)
-    avg_cost_df, avg_cost_update_time = get_data.get_any_data_type_df(str_date=today_str_date, data_type='avgcost_',
-                                                                      acct_num=default_acct_num)
-    pnl_tracker_df, pnl_tracker_update_time = get_data.get_any_data_type_df(str_date=today_str_date,
-                                                                            data_type='pnltracker_',
-                                                                            acct_num=default_acct_num)
-    daily_pnl_timeseries_df, unrealized_pnl_timeseries_df, position_pnl_df = (
-        get_data.create_daily_timeseries(position_df, avg_cost_df, position_pnl_df, transposed=False))
-    local_curr_avail_pos_pnl_con_list = daily_pnl_timeseries_df.columns.get_level_values(0).unique().tolist()
-    total_position_df = get_data.create_total_position_df(position_df, avg_cost_df, position_pnl_df, transposed=False)
-    total_position_df = total_position_df.reset_index().rename(columns={'index': 'Contract'})
-    available_position_dates = get_data.get_file_type_dates(data_type='positions_', acct_num=default_acct_num)
-    available_pnltracker_dates = get_data.get_file_type_dates(data_type='pnltracker_', acct_num=default_acct_num)
-    trade_tracker_html_doc_dict = get_data.get_trade_tracker_html_docs()
-    # get the latest set of the trade tracker hmtl docs, which means get the last n elements, where n is length of cats
-    local_tthdd_keys, local_tthdd_values = zip(*trade_tracker_html_doc_dict.items())
-    trade_tracker_html_doc_dict = \
-        dict(zip(local_tthdd_keys[len(trade_tracker_categories) * -1:],
-                 local_tthdd_values[len(trade_tracker_categories) * -1:]))
 
     the_store_data = {
-        'to_display_fills_df': local_to_display_fills_df.to_json(orient='split', date_format='iso'),
+        'to_display_fills_df': to_display_fills_df.to_json(orient='split', date_format='iso'),
         'to_display_open_orders_df': to_display_open_orders_df.to_json(orient='split', date_format='iso'),
         'position_pnl_df': position_pnl_df.to_json(orient='split', date_format='iso'),
         'position_df': position_df.to_json(orient='split', date_format='iso'),
@@ -883,9 +918,12 @@ def clean_data(n_clicks):
         'daily_pnl_timeseries_df': daily_pnl_timeseries_df.to_json(orient='split', date_format='iso'),
         'unrealized_pnl_timeseries_df': unrealized_pnl_timeseries_df.to_json(orient='split', date_format='iso'),
         'total_position_df': total_position_df.to_json(orient='split', date_format='iso'),
-        'available_position_dates': available_position_dates,
-        'available_pnltracker_dates': available_pnltracker_dates,
-        'trade_tracker_html_doc_dict': trade_tracker_html_doc_dict
+        #'available_position_dates': available_position_dates,
+        #'available_pnltracker_dates': available_pnltracker_dates,
+        'local_curr_avail_pos_pnl_con_list': local_curr_avail_pos_pnl_con_list,
+        'qfs_signals_df': qfs_signals_df.to_json(orient='split', date_format='iso'),
+        'margin_req_df': margin_req_df.to_json(orient='split', date_format='iso'),
+        'trade_tracker_html_doc_dict': local_trade_tracker_html_doc_dict
     }
 
     return json.dumps(the_store_data)

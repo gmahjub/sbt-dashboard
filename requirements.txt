@@ -4,7 +4,7 @@ numpy~=1.24.2
 
 # dataviz
 # plotly.express
-dash~=2.9.3
+dash~=2.15.0
 dash-bootstrap-components
 dash_bootstrap_templates
 dash-daq
@@ -25,4 +25,5 @@ flask
 flask-restful
 aws-cdk-lib==2.208.0
 constructs>=10.0.0,<11.0.0
-google-api-python-client
+# google-api-python-client
+dash-extensions
